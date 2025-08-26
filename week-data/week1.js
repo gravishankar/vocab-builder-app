@@ -1,4 +1,4 @@
-const wordList = [
+window.wordList = window.wordList || [
   {
     word: "Abroad",
     definition: "To or in a foreign country",
