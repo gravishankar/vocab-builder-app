@@ -10,7 +10,21 @@
   <script defer src="week-data/week1.js"></script>
 </head>
 <body>
-  <h1>Vocabulary Builder – Week 1</h1>
+  <h1>Vocabulary Builder</h1>
+
+  <div class="controls" style="max-width:860px;margin:0 auto 1rem;">
+    <label>Week:
+      <select id="weekSelect"></select>
+    </label>
+    <label style="margin-left:1rem;">Day:
+      <select id="daySelect"></select>
+    </label>
+    <button id="loadWeekBtn">Load</button>
+
+    <span style="float:right;">
+      <strong>🔁 Due Today:</strong> <span id="dueCount">0</span>
+    </span>
+  </div>
 
   <div class="tabs">
     <button onclick="showTab('visual')">📷 Visual Wall</button>
@@ -21,8 +35,38 @@
     <button onclick="showTab('review')">🔁 Spaced Recall</button>
   </div>
 
-  <div id="tab-content">
-    <!-- Content injected by app.js -->
-  </div>
+  <div id="tab-content"></div>
+
+  <hr style="margin:2rem 0;">
+
+  <h3>📥 Bulk Load 5,000 Words (CSV/JSON)</h3>
+  <p style="max-width:860px;margin:0 auto 1rem;">
+    Upload a <code>.csv</code> or <code>.json</code> with columns/fields:<br>
+    <code>word,definition,partOfSpeech,mnemonic,sentence,icon</code><br>
+    We’ll auto-chunk them into <strong>weeks (100)</strong> and <strong>days (20)</strong>.
+  </p>
+  <input type="file" id="bulkFile" accept=".csv,.json" />
+  <button id="ingestBtn">Ingest to Local Library</button>
+  <p id="ingestStatus"></p>
+
+  <!-- scripts -->
+  <script defer src="app.js"></script>
+  <script defer src="review.js"></script>
+  <script defer src="data_loader.js"></script>
+  <script defer src="scheduler.js"></script>
+  <!-- keep (or remove) the week1 seed load -->
+  <script defer src="week-data/week1.js"></script>
+  <script>
+    // Boot
+    document.addEventListener('DOMContentLoaded', () => {
+      initWeekDaySelectors();
+      document.getElementById('loadWeekBtn').addEventListener('click', loadSelectedWeekDay);
+      document.getElementById('ingestBtn').addEventListener('click', handleBulkIngest);
+      updateDueCountBadge();
+      // default view
+      showTab('visual');
+    });
+  </script>
 </body>
+
 </html>
