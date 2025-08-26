@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Vocabulary Builder App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="app.js"></script>
+  <script defer src="review.js"></script>
+  <script defer src="week-data/week1.js"></script>
+</head>
+<body>
+  <h1>Vocabulary Builder – Week 1</h1>
+
+  <div class="tabs">
+    <button onclick="showTab('visual')">📷 Visual Wall</button>
+    <button onclick="showTab('mnemonics')">🧠 Mnemonics</button>
+    <button onclick="showTab('context')">✍️ Context Sentences</button>
+    <button onclick="showTab('quiz')">📝 Quiz</button>
+    <button onclick="showTab('story')">🧩 Story Builder</button>
+    <button onclick="showTab('review')">🔁 Spaced Recall</button>
+  </div>
+
+  <div id="tab-content">
+    <!-- Content injected by app.js -->
+  </div>
+</body>
+</html>
