@@ -89,17 +89,51 @@
     function escapeHTML(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m])); }
     function cssEscape(s){ return String(s).replace(/[^a-zA-Z0-9_-]/g, '_'); }
 
+    // Toggle synonyms function
+    function toggleSynonyms(index) {
+      const synonymsSection = document.getElementById(`synonyms-${index}`);
+      const expandIcon = document.getElementById(`expand-${index}`);
+      
+      if (synonymsSection.style.display === 'none' || synonymsSection.style.display === '') {
+        synonymsSection.style.display = 'block';
+        expandIcon.textContent = '▲ hide synonyms';
+        expandIcon.style.color = '#e74c3c';
+      } else {
+        synonymsSection.style.display = 'none';
+        expandIcon.textContent = '▼ synonyms';
+        expandIcon.style.color = '#3498db';
+      }
+    }
+
     // Render functions
     function renderVisualWall() {
       const list = W();
       if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
-      return list.map(word =>
-        `<div style="margin-bottom:1em;">
-          <img src="${word.icon || 'icons/book.png'}" alt="" style="height:40px;vertical-align:middle;margin-right:10px;">
-          <strong>${word.word}</strong> — ${word.definition}
-          ${word.category ? `<span style="color:#888;margin-left:.5rem;">(${word.category})</span>` : ''}
-        </div>`
-      ).join('');
+      return list.map((word, index) => {
+        const hasSynonyms = word.synonyms || word.moreSynonyms;
+        const synonymsDisplay = word.synonyms ? `<strong>Synonyms:</strong> ${word.synonyms}` : '';
+        const moreSynonymsDisplay = word.moreSynonyms ? `<strong>More synonyms:</strong> ${word.moreSynonyms}` : '';
+        
+        return `<div class="word-card" style="margin-bottom:1.2em;padding:1em;background-color:#fafafa;border-radius:8px;border-left:4px solid #3498db;transition:all 0.3s ease;">
+          <div class="word-header" style="display:flex;align-items:center;cursor:${hasSynonyms ? 'pointer' : 'default'};" ${hasSynonyms ? `onclick="toggleSynonyms(${index})"` : ''}>
+            <img src="${word.icon || 'icons/book.png'}" alt="" style="height:40px;margin-right:12px;border-radius:4px;">
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <strong style="font-size:1.1em;color:#2c3e50;">${word.word}</strong>
+                ${word.partOfSpeech ? `<span style="color:#7f8c8d;font-size:0.9em;font-style:italic;">(${word.partOfSpeech})</span>` : ''}
+                ${hasSynonyms ? `<span class="expand-icon" id="expand-${index}" style="color:#3498db;font-size:0.8em;margin-left:auto;">▼ synonyms</span>` : ''}
+              </div>
+              <div style="color:#34495e;margin-top:0.3em;">${word.definition}</div>
+              ${word.category ? `<span style="color:#888;font-size:0.9em;">${word.category}</span>` : ''}
+            </div>
+          </div>
+          ${hasSynonyms ? `
+            <div class="synonyms-section" id="synonyms-${index}" style="display:none;margin-top:0.8em;padding-top:0.8em;border-top:1px solid #ecf0f1;">
+              ${synonymsDisplay ? `<div style="margin-bottom:0.5em;color:#e67e22;">${synonymsDisplay}</div>` : ''}
+              ${moreSynonymsDisplay ? `<div style="color:#8e44ad;">${moreSynonymsDisplay}</div>` : ''}
+            </div>` : ''}
+        </div>`;
+      }).join('');
     }
 
     function renderMnemonics() {

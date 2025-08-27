@@ -45,3 +45,22 @@ h1 {
   max-width: 800px;
   margin: 0 auto;
 }
+
+.word-card:hover {
+  background-color: #f0f8ff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.word-header:hover .expand-icon {
+  font-weight: bold;
+}
+
+.synonyms-section {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

@@ -184,7 +184,8 @@ function normalizeRows(parsed) {
     const mnemonic = row.mnemonic || row.Mnemonic || '';
     const sentence = row.sentence || row.Sentence || row.example || row.Example || row.context_sentence || '';
     const icon = row.icon || row.Icon || 'icons/book.png';
-    const synonyms = row.synonyms || row.Synonyms || row.more_synonyms || '';
+    const synonyms = row.synonyms || row.Synonyms || '';
+    const moreSynonyms = row.more_synonyms || row.moreSynonyms || row['More Synonyms'] || '';
     const level = row.level || row.Level || '';
     const storyBuilder = row.story_builder || row.storyBuilder || row['story builder'] || '';
     const mnemonicSourceUrl = row.mnemonic_source_url || row.mnemonicSourceUrl || '';
@@ -200,6 +201,7 @@ function normalizeRows(parsed) {
       sentence: sentence.trim(),
       icon: icon.trim(),
       synonyms: synonyms.trim(),
+      moreSynonyms: moreSynonyms.trim(),
       level: level.toString().trim(),
       storyBuilder: storyBuilder.trim(),
       mnemonicSourceUrl: mnemonicSourceUrl.trim()
