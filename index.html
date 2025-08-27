@@ -10,6 +10,25 @@
 <body>
   <h1>Vocabulary Builder</h1>
 
+  <!-- Search Section -->
+  <div class="search-container" style="max-width:860px;margin:0 auto 1.5rem;text-align:center;">
+    <div style="position:relative;display:inline-block;width:100%;max-width:500px;">
+      <input 
+        type="text" 
+        id="searchInput" 
+        placeholder="🔍 Search for any word..." 
+        style="width:100%;padding:12px 45px 12px 20px;font-size:1.1em;border:2px solid #3498db;border-radius:25px;outline:none;transition:all 0.3s ease;box-shadow:0 2px 10px rgba(52,152,219,0.1);"
+        autocomplete="off"
+      >
+      <button 
+        id="clearSearchBtn" 
+        style="position:absolute;right:15px;top:50%;transform:translateY(-50%);background:none;border:none;color:#7f8c8d;cursor:pointer;font-size:1.2em;display:none;"
+        title="Clear search"
+      >×</button>
+    </div>
+    <div id="searchSuggestions" style="position:relative;max-width:500px;margin:0 auto;"></div>
+  </div>
+
   <div class="controls" style="max-width:860px;margin:0 auto 1rem;">
     <label>Week:
       <select id="weekSelect"></select>
@@ -25,6 +44,7 @@
   </div>
 
   <div class="tabs">
+    <button data-tab="search">🔍 Search</button>
     <button data-tab="visual">📷 Visual Wall</button>
     <button data-tab="mnemonics">🧠 Mnemonics</button>
     <button data-tab="context">✍️ Context Sentences</button>
@@ -105,7 +125,201 @@
       }
     }
 
+    // Search functionality
+    let searchResults = [];
+    let currentSearchTerm = '';
+
+    function getAllWords() {
+      // Get words from cache or current wordList
+      return cachedFullDataset || W() || [];
+    }
+
+    function performSearch(searchTerm) {
+      if (!searchTerm || searchTerm.length < 2) {
+        searchResults = [];
+        return [];
+      }
+
+      const allWords = getAllWords();
+      const term = searchTerm.toLowerCase().trim();
+      
+      // Multi-criteria search with relevance scoring
+      const results = allWords.map(word => {
+        let score = 0;
+        const wordLower = (word.word || '').toLowerCase();
+        const defLower = (word.definition || '').toLowerCase();
+        const synonymsLower = ((word.synonyms || '') + ' ' + (word.moreSynonyms || '')).toLowerCase();
+        
+        // Exact word match (highest priority)
+        if (wordLower === term) score += 100;
+        // Word starts with search term
+        else if (wordLower.startsWith(term)) score += 80;
+        // Word contains search term
+        else if (wordLower.includes(term)) score += 60;
+        
+        // Definition contains search term
+        if (defLower.includes(term)) score += 30;
+        
+        // Synonyms contain search term
+        if (synonymsLower.includes(term)) score += 25;
+        
+        return { word, score };
+      })
+      .filter(result => result.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 50) // Limit to top 50 results
+      .map(result => result.word);
+
+      searchResults = results;
+      currentSearchTerm = searchTerm;
+      return results;
+    }
+
+    function showSearchSuggestions(searchTerm) {
+      const suggestionsContainer = document.getElementById('searchSuggestions');
+      
+      if (!searchTerm || searchTerm.length < 2) {
+        suggestionsContainer.innerHTML = '';
+        suggestionsContainer.style.display = 'none';
+        return;
+      }
+
+      const allWords = getAllWords();
+      const suggestions = allWords
+        .filter(word => word.word && word.word.toLowerCase().startsWith(searchTerm.toLowerCase()))
+        .slice(0, 8)
+        .map(word => word.word);
+
+      if (suggestions.length === 0) {
+        suggestionsContainer.style.display = 'none';
+        return;
+      }
+
+      const suggestionsHtml = suggestions.map(suggestion => 
+        `<div class="suggestion-item" onclick="selectSuggestion('${escapeJS(suggestion)}')" 
+         style="padding:8px 15px;cursor:pointer;text-align:left;border-bottom:1px solid #ecf0f1;background:white;color:#2c3e50;">
+          ${suggestion}
+        </div>`
+      ).join('');
+
+      suggestionsContainer.innerHTML = `
+        <div style="position:absolute;top:5px;left:0;right:0;background:white;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1000;max-height:300px;overflow-y:auto;">
+          ${suggestionsHtml}
+        </div>
+      `;
+      suggestionsContainer.style.display = 'block';
+    }
+
+    function selectSuggestion(word) {
+      document.getElementById('searchInput').value = word;
+      document.getElementById('searchSuggestions').style.display = 'none';
+      executeSearch(word);
+    }
+
+    function executeSearch(searchTerm = null) {
+      const term = searchTerm || document.getElementById('searchInput').value;
+      if (!term) return;
+
+      performSearch(term);
+      showTab('search');
+      document.getElementById('searchSuggestions').style.display = 'none';
+      
+      // Update clear button visibility
+      document.getElementById('clearSearchBtn').style.display = term ? 'block' : 'none';
+    }
+
+    function clearSearch() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('clearSearchBtn').style.display = 'none';
+      document.getElementById('searchSuggestions').style.display = 'none';
+      searchResults = [];
+      currentSearchTerm = '';
+      
+      // Return to visual wall
+      showTab('visual');
+    }
+
     // Render functions
+    function renderSearchResults() {
+      if (!currentSearchTerm) {
+        return `
+          <div style="text-align:center;padding:2rem;color:#7f8c8d;">
+            <div style="font-size:3em;margin-bottom:1rem;">🔍</div>
+            <h3 style="color:#2c3e50;margin-bottom:1rem;">Search for Words</h3>
+            <p>Use the search box above to find any word in the vocabulary database.</p>
+            <div style="background:#f8f9fa;padding:1rem;border-radius:8px;margin-top:1.5rem;text-align:left;">
+              <strong>Search Features:</strong>
+              <ul style="margin:0.5rem 0;">
+                <li>🎯 <strong>Exact matches</strong> and <strong>partial matches</strong></li>
+                <li>📖 Search by <strong>definition</strong> content</li>
+                <li>🔄 Search within <strong>synonyms</strong></li>
+                <li>⚡ <strong>Real-time suggestions</strong> as you type</li>
+              </ul>
+            </div>
+          </div>
+        `;
+      }
+
+      if (searchResults.length === 0) {
+        return `
+          <div style="text-align:center;padding:2rem;color:#7f8c8d;">
+            <div style="font-size:3em;margin-bottom:1rem;">🤷‍♀️</div>
+            <h3 style="color:#2c3e50;margin-bottom:1rem;">No Results Found</h3>
+            <p>No words found matching "<strong>${escapeHTML(currentSearchTerm)}</strong>"</p>
+            <p style="color:#7f8c8d;margin-top:1rem;">Try searching for:</p>
+            <div style="color:#3498db;">• A different spelling<br>• Part of the word<br>• A synonym or related term</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div style="margin-bottom:1rem;padding:1rem;background:#e8f6ff;border-radius:8px;text-align:center;">
+          <strong style="color:#2c3e50;">Found ${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${escapeHTML(currentSearchTerm)}"</strong>
+          <button onclick="clearSearch()" style="margin-left:1rem;padding:4px 12px;background:#3498db;color:white;border:none;border-radius:15px;cursor:pointer;font-size:0.9em;">
+            Clear Search
+          </button>
+        </div>
+        ${searchResults.map((word, index) => {
+          const hasSynonyms = word.synonyms || word.moreSynonyms;
+          const synonymsDisplay = word.synonyms ? `<strong>Synonyms:</strong> ${word.synonyms}` : '';
+          const moreSynonymsDisplay = word.moreSynonyms ? `<strong>More synonyms:</strong> ${word.moreSynonyms}` : '';
+          
+          return `<div class="word-card search-result" style="margin-bottom:1.2em;padding:1em;background-color:#fafafa;border-radius:8px;border-left:4px solid #e74c3c;transition:all 0.3s ease;">
+            <div class="word-header" style="display:flex;align-items:center;cursor:${hasSynonyms ? 'pointer' : 'default'};" ${hasSynonyms ? `onclick="toggleSynonyms('search-${index}')"` : ''}>
+              <img src="${word.icon || 'icons/book.png'}" alt="" style="height:40px;margin-right:12px;border-radius:4px;">
+              <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <strong style="font-size:1.1em;color:#2c3e50;">${highlightSearchTerm(word.word, currentSearchTerm)}</strong>
+                  ${word.partOfSpeech ? `<span style="color:#7f8c8d;font-size:0.9em;font-style:italic;">(${word.partOfSpeech})</span>` : ''}
+                  ${hasSynonyms ? `<span class="expand-icon" id="expand-search-${index}" style="color:#e74c3c;font-size:0.8em;margin-left:auto;">▼ synonyms</span>` : ''}
+                </div>
+                <div style="color:#34495e;margin-top:0.3em;">${highlightSearchTerm(word.definition, currentSearchTerm)}</div>
+                ${word.level ? `<span style="color:#888;font-size:0.9em;">Level ${word.level}</span>` : ''}
+              </div>
+            </div>
+            ${hasSynonyms ? `
+              <div class="synonyms-section" id="synonyms-search-${index}" style="display:none;margin-top:0.8em;padding-top:0.8em;border-top:1px solid #ecf0f1;">
+                ${synonymsDisplay ? `<div style="margin-bottom:0.5em;color:#e67e22;">${highlightSearchTerm(synonymsDisplay, currentSearchTerm)}</div>` : ''}
+                ${moreSynonymsDisplay ? `<div style="color:#8e44ad;">${highlightSearchTerm(moreSynonymsDisplay, currentSearchTerm)}</div>` : ''}
+              </div>` : ''}
+            ${word.mnemonic ? `
+              <div style="margin-top:0.8em;padding-top:0.8em;border-top:1px solid #ecf0f1;">
+                <div style="color:#27ae60;font-size:0.9em;"><strong>🧠 Memory Device:</strong> ${word.mnemonic}</div>
+              </div>` : ''}
+          </div>`;
+        }).join('')}
+      `;
+    }
+
+    function highlightSearchTerm(text, term) {
+      if (!term || !text) return escapeHTML(text);
+      
+      const escapedText = escapeHTML(text);
+      const escapedTerm = escapeHTML(term);
+      const regex = new RegExp(`(${escapedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      return escapedText.replace(regex, '<mark style="background:#fff3cd;padding:1px 3px;border-radius:3px;">$1</mark>');
+    }
+
     function renderVisualWall() {
       const list = W();
       if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
@@ -272,6 +486,7 @@
       if (activeBtn) activeBtn.classList.add('active');
 
       // Render the appropriate tab content
+      if (tabName === "search")   tabContent.innerHTML = renderSearchResults();
       if (tabName === "visual")   tabContent.innerHTML = renderVisualWall();
       if (tabName === "mnemonics")tabContent.innerHTML = renderMnemonics();
       if (tabName === "context")  tabContent.innerHTML = renderContextSentences();
@@ -406,9 +621,55 @@
           showTab(tabName, e.target);
         });
       });
+
+      // Add search event listeners
+      const searchInput = document.getElementById('searchInput');
+      const clearBtn = document.getElementById('clearSearchBtn');
+      const suggestionsContainer = document.getElementById('searchSuggestions');
+
+      searchInput.addEventListener('input', (e) => {
+        const value = e.target.value;
+        clearBtn.style.display = value ? 'block' : 'none';
+        
+        // Show suggestions after 2+ characters
+        if (value.length >= 2) {
+          showSearchSuggestions(value);
+        } else {
+          suggestionsContainer.style.display = 'none';
+        }
+      });
+
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          executeSearch();
+        } else if (e.key === 'Escape') {
+          clearSearch();
+        }
+      });
+
+      clearBtn.addEventListener('click', clearSearch);
+
+      // Hide suggestions when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-container')) {
+          suggestionsContainer.style.display = 'none';
+        }
+      });
+
+      // Add focus styling
+      searchInput.addEventListener('focus', () => {
+        searchInput.style.borderColor = '#2980b9';
+        searchInput.style.boxShadow = '0 2px 10px rgba(52,152,219,0.2)';
+      });
+
+      searchInput.addEventListener('blur', () => {
+        searchInput.style.borderColor = '#3498db';
+        searchInput.style.boxShadow = '0 2px 10px rgba(52,152,219,0.1)';
+      });
       
-      // default view - show visual tab
-      showTab('visual');
+      // default view - show search tab
+      showTab('search');
     });
   </script>
 </body>
