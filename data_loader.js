@@ -58,6 +58,24 @@ function getLibrary() {
   try { return JSON.parse(localStorage.getItem('vb.library')||'[]'); } catch(e){ return []; }
 }
 
+// Reset all stored data
+function resetAllData() {
+  // Clear library data
+  localStorage.removeItem('vb.library');
+  // Clear all spaced repetition data
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('vb.firstSeen.') || key.startsWith('word-')) {
+      localStorage.removeItem(key);
+    }
+  });
+  // Reset UI
+  window.wordList = [];
+  initWeekDaySelectors();
+  if (typeof showTab === 'function') showTab('visual');
+  if (typeof updateDueCountBadge === 'function') updateDueCountBadge();
+  document.getElementById('ingestStatus').textContent = '✅ All data cleared. Ready for fresh import.';
+}
+
 // Chunk into weeks of 100, days of 20 (5 days/week)
 function chunkLibraryToMap(all) {
   const map = {}; // {week:{day:[words]}}
@@ -95,6 +113,8 @@ function loadWeekDay(week, day) {
   const combined = seed.concat(lib); // seed week1 + library
   const map = chunkLibraryToMap(combined);
   const todays = (map[week] && map[week][day]) ? map[week][day] : [];
+  console.log(`Loading Week ${week}, Day ${day}:`, todays.length, 'words');
+  console.log('Sample words:', todays.slice(0, 3));
   if (!todays.length) {
     alert('No words found for this week/day. Try ingesting your library.');
     return;
@@ -104,10 +124,9 @@ function loadWeekDay(week, day) {
   window.activeDay  = day;
   // mark first-seen timestamps for SRS
   todays.forEach(w => ensureFirstSeen(w.word));
-  // re-render current tab
-  const current = document.querySelector('.tabs button.active');
-  showTab(current ? current.dataset.tab : 'visual');
-  updateDueCountBadge();
+  // re-render current tab - force visual tab since it's most useful after loading
+  if (typeof showTab === 'function') showTab('visual');
+  if (typeof updateDueCountBadge === 'function') updateDueCountBadge();
 }
 
 // Ingest handler
@@ -131,14 +150,60 @@ async function handleBulkIngest() {
   }
 
   const existing = getLibrary();
-  saveLibrary(existing.concat(normalized));
-  initWeekDaySelectors();
-
-  document.getElementById('ingestStatus').textContent =
-    `✅ Ingested ${normalized.length} words. Total library: ${getLibrary().length}.`;
+  const combined = existing.concat(normalized);
+  
+  try {
+    saveLibrary(combined);
+    initWeekDaySelectors();
+    document.getElementById('ingestStatus').textContent =
+      `✅ Ingested ${normalized.length} words. Total library: ${getLibrary().length}.`;
+  } catch (e) {
+    if (e.name === 'QuotaExceededError') {
+      document.getElementById('ingestStatus').textContent =
+        `❌ Storage quota exceeded! Use "Reset All Data" button to clear space, then try again.`;
+    } else {
+      document.getElementById('ingestStatus').textContent =
+        `❌ Error saving data: ${e.message}`;
+    }
+    console.error('Storage error:', e);
+    return;
+  }
 
   // Auto-load Week 1 / Day 1 to show 20 words immediately
   loadWeekDay(1, 1);
-  showTab('visual');
+  if (typeof showTab === 'function') showTab('visual');
+}
+
+// Normalize parsed CSV/JSON rows to expected format
+function normalizeRows(parsed) {
+  return parsed.map(row => {
+    // Handle different possible column names and formats
+    const word = row.word || row.Word || '';
+    const definition = row.definition || row.Definition || row.def || '';
+    const partOfSpeech = row.part_of_speech || row.partOfSpeech || row.pos || row.PartOfSpeech || '';
+    const mnemonic = row.mnemonic || row.Mnemonic || '';
+    const sentence = row.sentence || row.Sentence || row.example || row.Example || row.context_sentence || '';
+    const icon = row.icon || row.Icon || 'icons/book.png';
+    const synonyms = row.synonyms || row.Synonyms || row.more_synonyms || '';
+    const level = row.level || row.Level || '';
+    const storyBuilder = row.story_builder || row.storyBuilder || row['story builder'] || '';
+    const mnemonicSourceUrl = row.mnemonic_source_url || row.mnemonicSourceUrl || '';
+    
+    // Skip rows without essential data
+    if (!word || !definition) return null;
+    
+    return {
+      word: word.trim(),
+      definition: definition.trim(),
+      partOfSpeech: partOfSpeech.trim(),
+      mnemonic: mnemonic.trim(),
+      sentence: sentence.trim(),
+      icon: icon.trim(),
+      synonyms: synonyms.trim(),
+      level: level.toString().trim(),
+      storyBuilder: storyBuilder.trim(),
+      mnemonicSourceUrl: mnemonicSourceUrl.trim()
+    };
+  }).filter(row => row !== null);
 }
 

@@ -5,8 +5,6 @@
   <title>Vocabulary Builder App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
-  <script defer src="app.js"></script>
-  <script defer src="review.js"></script>
   <script defer src="week-data/week1.js"></script>
 </head>
 <body>
@@ -27,12 +25,12 @@
   </div>
 
   <div class="tabs">
-    <button onclick="showTab('visual')">📷 Visual Wall</button>
-    <button onclick="showTab('mnemonics')">🧠 Mnemonics</button>
-    <button onclick="showTab('context')">✍️ Context Sentences</button>
-    <button onclick="showTab('quiz')">📝 Quiz</button>
-    <button onclick="showTab('story')">🧩 Story Builder</button>
-    <button onclick="showTab('review')">🔁 Spaced Recall</button>
+    <button data-tab="visual">📷 Visual Wall</button>
+    <button data-tab="mnemonics">🧠 Mnemonics</button>
+    <button data-tab="context">✍️ Context Sentences</button>
+    <button data-tab="quiz">📝 Quiz</button>
+    <button data-tab="story">🧩 Story Builder</button>
+    <button data-tab="review">🔁 Spaced Recall</button>
   </div>
 
   <div id="tab-content"></div>
@@ -47,21 +45,213 @@
   </p>
   <input type="file" id="bulkFile" accept=".csv,.json" />
   <button id="ingestBtn">Ingest to Local Library</button>
+  <button id="resetBtn" style="background-color:#e74c3c;color:white;margin-left:10px;">🗑️ Reset All Data</button>
   <p id="ingestStatus"></p>
 
   <!-- scripts -->
-  <script defer src="data_loader.js"></script>
-  <script defer src="scheduler.js"></script>
-  <script defer src="app.js"></script>
-  <script defer src="review.js"></script>
+  <script src="data_loader.js"></script>
+  <script src="scheduler.js"></script>
+  <script src="app.js"></script>
   <script>
-    // Boot
+    // Helper function from app.js
+    function W() {
+      if (Array.isArray(window.wordList)) {
+        console.log('Using window.wordList:', window.wordList.length, 'words');
+        return window.wordList;
+      }
+      try { 
+        if (typeof wordList !== 'undefined') {
+          console.log('Using seed wordList:', wordList.length, 'words');
+          return wordList; 
+        } 
+      } catch(e){}
+      console.log('No words found, returning empty array');
+      return [];
+    }
+
+    function shuffle(arr){ return arr.slice().sort(()=>Math.random()-0.5); }
+    function escapeJS(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+    function escapeHTML(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m])); }
+    function cssEscape(s){ return String(s).replace(/[^a-zA-Z0-9_-]/g, '_'); }
+
+    // Render functions
+    function renderVisualWall() {
+      const list = W();
+      if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
+      return list.map(word =>
+        `<div style="margin-bottom:1em;">
+          <img src="${word.icon || 'icons/book.png'}" alt="" style="height:40px;vertical-align:middle;margin-right:10px;">
+          <strong>${word.word}</strong> — ${word.definition}
+          ${word.category ? `<span style="color:#888;margin-left:.5rem;">(${word.category})</span>` : ''}
+        </div>`
+      ).join('');
+    }
+
+    function renderMnemonics() {
+      const list = W();
+      if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
+      return list.map(word =>
+        `<div style="margin-bottom:1.5em;padding:1em;background-color:#f9f9f9;border-radius:8px;border-left:4px solid #3498db;">
+          <strong style="color:#2c3e50;font-size:1.1em;">${word.word}</strong>
+          <span style="color:#7f8c8d;margin-left:0.5em;">(${word.partOfSpeech || 'unknown'})</span>
+          <div style="margin-top:0.5em;color:#34495e;">
+            <strong>Definition:</strong> ${word.definition}
+          </div>
+          <div style="margin-top:0.8em;color:#e74c3c;">
+            <strong>🧠 Memory Device:</strong> ${word.mnemonic || '<em>No mnemonic available</em>'}
+          </div>
+          ${word.mnemonicSourceUrl ? `<div style="margin-top:0.3em;font-size:0.9em;"><a href="${word.mnemonicSourceUrl}" target="_blank" style="color:#3498db;">📖 Source</a></div>` : ''}
+        </div>`
+      ).join('');
+    }
+
+    function renderContextSentences() {
+      const list = W();
+      if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
+      return list.map(word =>
+        `<div style="margin-bottom:1.5em;padding:1em;background-color:#f8fff8;border-radius:8px;border-left:4px solid #27ae60;">
+          <strong style="color:#2c3e50;font-size:1.1em;">${word.word}</strong>
+          <span style="color:#7f8c8d;margin-left:0.5em;">(${word.partOfSpeech || 'unknown'})</span>
+          <div style="margin-top:0.5em;color:#34495e;">
+            <strong>Definition:</strong> ${word.definition}
+          </div>
+          <div style="margin-top:0.8em;color:#27ae60;">
+            <strong>✍️ Context Sentence:</strong> ${word.sentence || '<em>No context sentence available</em>'}
+          </div>
+        </div>`
+      ).join('');
+    }
+
+    function renderQuiz() {
+      const list = W();
+      if (!list.length) return `<p>Load a Week/Day first.</p>`;
+      const due = (typeof dueWordsInCurrentSet === 'function') ? dueWordsInCurrentSet() : [];
+      const pool = due.length ? due : list;
+      const q = pool[Math.floor(Math.random() * pool.length)];
+      const inputId = "quiz-answer";
+      return `
+        <p><strong>What is the definition of "<span>${q.word}</span>"?</strong></p>
+        <input type="text" id="${inputId}" style="width:100%;padding:8px;" placeholder="Type your answer here...">
+        <button onclick="checkAnswer('${escapeJS(q.word)}','${escapeJS(q.definition)}','${inputId}')">Check</button>
+        <p id="quiz-feedback" style="margin-top:10px;"></p>
+        <p style="margin-top:10px;color:#555;">${due.length ? '🔁 Spaced practice word' : '📚 Practice word'}</p>
+      `;
+    }
+
+    function renderStoryBuilder() {
+      const list = W();
+      if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
+      
+      // Show story builder prompts from CSV data
+      return list.map(word => {
+        if (word.storyBuilder && word.storyBuilder.trim()) {
+          return `<div style="margin-bottom:1.5em;padding:1em;background-color:#fff8dc;border-radius:8px;border-left:4px solid #f39c12;">
+            <strong style="color:#2c3e50;font-size:1.1em;">${word.word}</strong>
+            <span style="color:#7f8c8d;margin-left:0.5em;">(${word.partOfSpeech || 'unknown'})</span>
+            <div style="margin-top:0.5em;color:#34495e;">
+              <strong>Definition:</strong> ${word.definition}
+            </div>
+            <div style="margin-top:0.8em;color:#d68910;">
+              <strong>🧩 Story Prompt:</strong> ${word.storyBuilder}
+            </div>
+          </div>`;
+        }
+        return '';
+      }).filter(item => item).join('') || 
+      `<div style="padding:1em;background-color:#fff8dc;border-radius:8px;border-left:4px solid #f39c12;">
+        <p><strong>🧩 Creative Story Challenge</strong></p>
+        <p>Use these words in a creative sentence or story:</p>
+        <ul>${shuffle(list).slice(0, 5).map(w => `<li><strong>${w.word}</strong> - ${w.definition}</li>`).join('')}</ul>
+        <textarea rows="6" style="width:100%;padding:10px;margin-top:10px;" placeholder="Write your creative story here using the words above..."></textarea>
+      </div>`;
+    }
+
+    function renderSpacedRecall() {
+      if (typeof dueWordsInCurrentSet !== 'function') {
+        return `<p>Spaced recall engine not loaded. Make sure <code>scheduler.js</code> is included.</p>`;
+      }
+      const list = W();
+      if (!list.length) return `<p>Load a Week/Day first.</p>`;
+      const due = dueWordsInCurrentSet();
+      if (!due.length) return "<p>No words are due for spaced review right now. ✅</p>";
+
+      const items = due.map(w => {
+        const distractors = shuffle(W().filter(x => x.word !== w.word)).slice(0,3).map(x => x.definition);
+        const choices = shuffle([w.definition, ...distractors]);
+        const opts = choices.map(c => `<label style="display:block;margin:.25rem 0;">
+            <input type="radio" name="q_${w.word}" value="${escapeHTML(c)}"> ${escapeHTML(c)}
+          </label>`).join('');
+        return `<div class="rev-item" style="margin:1rem 0;padding:.75rem;border:1px solid #eee;border-radius:8px;">
+          <strong>${w.word}</strong>
+          <div>${opts}</div>
+          <button onclick="gradeReview('${escapeJS(w.word)}','${escapeJS(w.definition)}')">Check</button>
+          <span id="res_${cssEscape(w.word)}" style="margin-left:.5rem;"></span>
+        </div>`;
+      }).join('');
+
+      return `<h3>🔁 Spaced Review (${due.length} due)</h3>${items}`;
+    }
+
+    function checkAnswer(word, correct, inputId) {
+      const userInput = document.getElementById(inputId).value.trim().toLowerCase();
+      const ok = userInput && correct.toLowerCase().split(/\W+/).some(t => t && userInput.includes(t));
+      document.getElementById("quiz-feedback").textContent = ok
+        ? "✅ Correct!"
+        : `❌ Try again. Correct answer: ${correct}`;
+      if (typeof updateDueCountBadge === 'function') updateDueCountBadge();
+    }
+
+    function gradeReview(word, correctDef) {
+      const sel = document.querySelector(`input[name="q_${cssEscape(word)}"]:checked`);
+      const res = document.getElementById(`res_${cssEscape(word)}`);
+      if (!sel) { if (res) res.textContent = 'Pick an option.'; return; }
+      const ok = sel.value === correctDef;
+      if (res) res.textContent = ok ? '✅' : '❌';
+      if (typeof updateDueCountBadge === 'function') updateDueCountBadge();
+    }
+
+    // Global showTab function
+    function showTab(tabName, btn) {
+      const tabContent = document.getElementById("tab-content");
+      document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+      
+      // Find the button that was clicked or matches the tab
+      let activeBtn = btn;
+      if (!activeBtn) {
+        activeBtn = document.querySelector(`.tabs button[data-tab="${tabName}"]`);
+      }
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // Render the appropriate tab content
+      if (tabName === "visual")   tabContent.innerHTML = renderVisualWall();
+      if (tabName === "mnemonics")tabContent.innerHTML = renderMnemonics();
+      if (tabName === "context")  tabContent.innerHTML = renderContextSentences();
+      if (tabName === "quiz")     tabContent.innerHTML = renderQuiz();
+      if (tabName === "story")    tabContent.innerHTML = renderStoryBuilder();
+      if (tabName === "review")   tabContent.innerHTML = renderSpacedRecall();
+    }
+
+    // Initialize after all scripts are loaded
     document.addEventListener('DOMContentLoaded', () => {
       initWeekDaySelectors();
       document.getElementById('loadWeekBtn').addEventListener('click', loadSelectedWeekDay);
       document.getElementById('ingestBtn').addEventListener('click', handleBulkIngest);
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to delete all vocabulary data? This cannot be undone.')) {
+          resetAllData();
+        }
+      });
       updateDueCountBadge();
-      // default view
+      
+      // Add event listeners to tab buttons
+      document.querySelectorAll('.tabs button[data-tab]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const tabName = e.target.getAttribute('data-tab');
+          showTab(tabName, e.target);
+        });
+      });
+      
+      // default view - show visual tab
       showTab('visual');
     });
   </script>

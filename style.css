@@ -33,6 +33,10 @@ h1 {
   background-color: #2980b9;
 }
 
+.tabs button.active {
+  background-color: #e74c3c;
+}
+
 #tab-content {
   background-color: white;
   padding: 1rem;

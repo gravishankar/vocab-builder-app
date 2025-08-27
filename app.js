@@ -1,28 +1,26 @@
 // app.js — uses the active list from loader OR the seed if loader hasn't run
 function W() {
   // Prefer the live list set by data_loader.js -> loadWeekDay()
-  if (Array.isArray(window.wordList)) return window.wordList;
+  if (Array.isArray(window.wordList)) {
+    console.log('Using window.wordList:', window.wordList.length, 'words');
+    return window.wordList;
+  }
   // Fallback to seed if present (week1.js). Top-level const in non-module
   // scripts isn't on window, so guard for ReferenceError:
-  try { if (typeof wordList !== 'undefined') return wordList; } catch(e){}
+  try { 
+    if (typeof wordList !== 'undefined') {
+      console.log('Using seed wordList:', wordList.length, 'words');
+      return wordList; 
+    } 
+  } catch(e){}
+  console.log('No words found, returning empty array');
   return [];
 }
 
-function showTab(tabName, btn) {
-  const tabContent = document.getElementById("tab-content");
-  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-  if (btn && btn.target) btn.target.classList.add('active');
-
-  if (tabName === "visual")   tabContent.innerHTML = renderVisualWall();
-  if (tabName === "mnemonics")tabContent.innerHTML = renderMnemonics();
-  if (tabName === "context")  tabContent.innerHTML = renderContextSentences();
-  if (tabName === "quiz")     tabContent.innerHTML = renderQuiz();
-  if (tabName === "story")    tabContent.innerHTML = renderStoryBuilder();
-  if (tabName === "review")   tabContent.innerHTML = renderSpacedRecall();
-}
+// showTab function moved to inline script in index.html for immediate availability
 
 // ---- Tabs ----
-function renderVisualWall() {
+window.renderVisualWall = function renderVisualWall() {
   const list = W();
   if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
   return list.map(word =>
@@ -34,7 +32,7 @@ function renderVisualWall() {
   ).join('');
 }
 
-function renderMnemonics() {
+window.renderMnemonics = function renderMnemonics() {
   const list = W();
   return list.map(word =>
     `<div style="margin-bottom:1em;">
@@ -43,7 +41,7 @@ function renderMnemonics() {
   ).join('');
 }
 
-function renderContextSentences() {
+window.renderContextSentences = function renderContextSentences() {
   const list = W();
   return list.map(word =>
     `<div style="margin-bottom:1em;">
@@ -53,7 +51,7 @@ function renderContextSentences() {
 }
 
 // ---- Quiz (prioritizes due words via scheduler.js) ----
-function renderQuiz() {
+window.renderQuiz = function renderQuiz() {
   const list = W();
   if (!list.length) return `<p>Load a Week/Day first.</p>`;
   const due = (typeof dueWordsInCurrentSet === 'function') ? dueWordsInCurrentSet() : [];
@@ -69,7 +67,7 @@ function renderQuiz() {
   `;
 }
 
-function checkAnswer(word, correct, inputId) {
+window.checkAnswer = function checkAnswer(word, correct, inputId) {
   const userInput = document.getElementById(inputId).value.trim().toLowerCase();
   const ok = userInput && correct.toLowerCase().split(/\W+/).some(t => t && userInput.includes(t));
   document.getElementById("quiz-feedback").textContent = ok
@@ -79,7 +77,7 @@ function checkAnswer(word, correct, inputId) {
 }
 
 // ---- Story Builder ----
-function renderStoryBuilder() {
+window.renderStoryBuilder = function renderStoryBuilder() {
   const list = W();
   const sample = shuffle(list).slice(0, 5);
   return `
@@ -90,7 +88,7 @@ function renderStoryBuilder() {
 }
 
 // ---- Review list hooks from scheduler.js ----
-function renderSpacedRecall() {
+window.renderSpacedRecall = function renderSpacedRecall() {
   if (typeof dueWordsInCurrentSet !== 'function') {
     return `<p>Spaced recall engine not loaded. Make sure <code>scheduler.js</code> is included.</p>`;
   }
@@ -109,16 +107,16 @@ function renderSpacedRecall() {
       <strong>${w.word}</strong>
       <div>${opts}</div>
       <button onclick="gradeReview('${escapeJS(w.word)}','${escapeJS(w.definition)}')">Check</button>
-      <span id="res_${escapeHTMLAttr(w.word)}" style="margin-left:.5rem;"></span>
+      <span id="res_${cssEscape(w.word)}" style="margin-left:.5rem;"></span>
     </div>`;
   }).join('');
 
   return `<h3>🔁 Spaced Review (${due.length} due)</h3>${items}`;
 }
 
-function gradeReview(word, correctDef) {
+window.gradeReview = function gradeReview(word, correctDef) {
   const sel = document.querySelector(`input[name="q_${cssEscape(word)}"]:checked`);
-  const res = document.getElementById(`res_${word}`);
+  const res = document.getElementById(`res_${cssEscape(word)}`);
   if (!sel) { if (res) res.textContent = 'Pick an option.'; return; }
   const ok = sel.value === correctDef;
   if (res) res.textContent = ok ? '✅' : '❌';
