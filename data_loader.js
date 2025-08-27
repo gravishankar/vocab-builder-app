@@ -1,17 +1,54 @@
 // data_loader.js
 // Simple CSV parser (no external deps)
+// --- Replace your old parseCSV with this one ---
 function parseCSV(text) {
-  const lines = text.split(/\r?\n/).filter(Boolean);
-  const headers = lines[0].split(',').map(h => h.trim());
-  const rows = lines.slice(1).map(line => {
-    // naive split: assume commas not in quotes for school-safe lists
-    const cols = line.split(',').map(c => c.trim());
+  const rows = [];
+  let i = 0, cur = '', row = [], inQuotes = false;
+
+  function pushCell() {
+    // Unescape double quotes inside quoted fields
+    const v = inQuotes ? cur.replace(/""/g, '"') : cur;
+    row.push(v);
+    cur = '';
+  }
+  while (i < text.length) {
+    const ch = text[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i+1] === '"') { cur += '"'; i += 2; continue; } // escaped quote
+        inQuotes = false; i++; continue; // closing quote
+      } else {
+        cur += ch; i++; continue;
+      }
+    } else { // not in quotes
+      if (ch === '"') { inQuotes = true; i++; continue; }
+      if (ch === ',') { pushCell(); i++; continue; }
+      if (ch === '\n') { pushCell(); rows.push(row); row = []; i++; continue; }
+      if (ch === '\r') { // handle CRLF
+        // finalize cell and line on \r\n or just \r
+        pushCell();
+        rows.push(row);
+        row = [];
+        if (text[i+1] === '\n') i += 2; else i++;
+        continue;
+      }
+      cur += ch; i++; continue;
+    }
+  }
+  // flush last cell/row
+  pushCell();
+  if (row.length > 1 || row[0] !== '') rows.push(row);
+
+  if (!rows.length) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(cols => {
     const obj = {};
-    headers.forEach((h, i) => obj[h] = cols[i] || '');
+    headers.forEach((h, idx) => obj[h] = (cols[idx] || '').trim());
     return obj;
   });
-  return rows;
 }
+
 
 // Save large library in LS
 function saveLibrary(arr) {
@@ -79,24 +116,29 @@ async function handleBulkIngest() {
   if (!file) { alert('Choose a CSV or JSON file.'); return; }
   const text = await file.text();
   let parsed = [];
-  if (file.name.endsWith('.csv')) {
-    parsed = parseCSV(text);
-  } else {
-    parsed = JSON.parse(text);
+  try {
+    parsed = file.name.toLowerCase().endsWith('.csv') ? parseCSV(text) : JSON.parse(text);
+  } catch (e) {
+    console.error('Parse error:', e);
+    alert('Could not parse the file. If CSV, ensure headers and quotes are correct.');
+    return;
   }
-  // normalize fields
-  const normalized = parsed.map(x => ({
-    word: (x.word||x.Word||'').trim(),
-    definition: (x.definition||x.Definition||'').trim(),
-    partOfSpeech: (x.partOfSpeech||x.pos||'').trim(),
-    mnemonic: (x.mnemonic||'').trim(),
-    sentence: (x.sentence||'').trim(),
-    icon: (x.icon||'icons/book.png').trim()
-  })).filter(x => x.word && x.definition);
+
+  const normalized = normalizeRows(parsed);
+  if (!normalized.length) {
+    alert('No valid rows found (need at least word + definition).');
+    return;
+  }
 
   const existing = getLibrary();
   saveLibrary(existing.concat(normalized));
   initWeekDaySelectors();
+
   document.getElementById('ingestStatus').textContent =
     `✅ Ingested ${normalized.length} words. Total library: ${getLibrary().length}.`;
+
+  // Auto-load Week 1 / Day 1 to show 20 words immediately
+  loadWeekDay(1, 1);
+  showTab('visual');
 }
+
