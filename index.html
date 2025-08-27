@@ -37,15 +37,30 @@
 
   <hr style="margin:2rem 0;">
 
-  <h3>📥 Bulk Load 5,000 Words (CSV/JSON)</h3>
+  <h3>📥 Load Vocabulary Data</h3>
   <p style="max-width:860px;margin:0 auto 1rem;">
-    Upload a <code>.csv</code> or <code>.json</code> with columns/fields:<br>
-    <code>word,definition,partOfSpeech,mnemonic,sentence,icon</code><br>
-    We’ll auto-chunk them into <strong>weeks (100)</strong> and <strong>days (20)</strong>.
+    <strong>Option 1:</strong> Auto-load 5,000+ words with mnemonics from our curated dataset<br>
+    <strong>Option 2:</strong> Upload your own <code>.csv</code> or <code>.json</code> file
   </p>
-  <input type="file" id="bulkFile" accept=".csv,.json" />
-  <button id="ingestBtn">Ingest to Local Library</button>
-  <button id="resetBtn" style="background-color:#e74c3c;color:white;margin-left:10px;">🗑️ Reset All Data</button>
+  
+  <div style="max-width:860px;margin:0 auto 1rem;">
+    <button id="autoLoadBtn" style="background-color:#27ae60;color:white;padding:10px 20px;margin-right:10px;border:none;border-radius:5px;cursor:pointer;">
+      📊 Auto-Load Enhanced Dataset (5,000+ words)
+    </button>
+    <button id="manualLoadToggle" style="background-color:#3498db;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;">
+      📁 Upload Custom File
+    </button>
+  </div>
+
+  <div id="manualUpload" style="max-width:860px;margin:0 auto 1rem;display:none;">
+    <p style="color:#666;margin-bottom:10px;">
+      Upload a <code>.csv</code> or <code>.json</code> with columns: <code>word,definition,partOfSpeech,mnemonic,sentence,icon</code>
+    </p>
+    <input type="file" id="bulkFile" accept=".csv,.json" />
+    <button id="ingestBtn">Ingest to Local Library</button>
+  </div>
+  
+  <button id="resetBtn" style="background-color:#e74c3c;color:white;margin-left:10px;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;">🗑️ Reset All Data</button>
   <p id="ingestStatus"></p>
 
   <!-- scripts -->
@@ -231,11 +246,62 @@
       if (tabName === "review")   tabContent.innerHTML = renderSpacedRecall();
     }
 
+    // Auto-load CSV from GitHub
+    async function autoLoadFromGitHub() {
+      try {
+        document.getElementById('ingestStatus').textContent = '📥 Loading enhanced dataset from GitHub...';
+        
+        // Fetch CSV from GitHub repository
+        const response = await fetch('data/sesamewords_leveled_list_with_mnemonics.csv');
+        if (!response.ok) throw new Error('Failed to fetch data from GitHub');
+        
+        const csvText = await response.text();
+        const parsed = parseCSV(csvText);
+        const normalized = normalizeRows(parsed);
+        
+        if (!normalized.length) {
+          document.getElementById('ingestStatus').textContent = '❌ No valid data found in GitHub dataset.';
+          return;
+        }
+
+        // Save to localStorage
+        const existing = getLibrary();
+        const combined = existing.concat(normalized);
+        
+        try {
+          saveLibrary(combined);
+          initWeekDaySelectors();
+          document.getElementById('ingestStatus').textContent = 
+            `✅ Auto-loaded ${normalized.length} words from GitHub! Total library: ${getLibrary().length}.`;
+          
+          // Auto-load Week 1 / Day 1 to show words immediately
+          loadWeekDay(1, 1);
+          if (typeof showTab === 'function') showTab('visual');
+        } catch (e) {
+          if (e.name === 'QuotaExceededError') {
+            document.getElementById('ingestStatus').textContent = 
+              '❌ Storage quota exceeded! Use "Reset All Data" button first.';
+          } else {
+            document.getElementById('ingestStatus').textContent = `❌ Error saving data: ${e.message}`;
+          }
+        }
+      } catch (error) {
+        console.error('Auto-load error:', error);
+        document.getElementById('ingestStatus').textContent = 
+          '❌ Failed to auto-load from GitHub. Try uploading the CSV file manually.';
+      }
+    }
+
     // Initialize after all scripts are loaded
     document.addEventListener('DOMContentLoaded', () => {
       initWeekDaySelectors();
       document.getElementById('loadWeekBtn').addEventListener('click', loadSelectedWeekDay);
       document.getElementById('ingestBtn').addEventListener('click', handleBulkIngest);
+      document.getElementById('autoLoadBtn').addEventListener('click', autoLoadFromGitHub);
+      document.getElementById('manualLoadToggle').addEventListener('click', () => {
+        const uploadDiv = document.getElementById('manualUpload');
+        uploadDiv.style.display = uploadDiv.style.display === 'none' ? 'block' : 'none';
+      });
       document.getElementById('resetBtn').addEventListener('click', () => {
         if (confirm('Are you sure you want to delete all vocabulary data? This cannot be undone.')) {
           resetAllData();
