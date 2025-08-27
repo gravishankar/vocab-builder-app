@@ -312,8 +312,16 @@
     }
 
     function highlightSearchTerm(text, term) {
-      if (!term || !text) return escapeHTML(text);
+      if (!term || !text) return text;
       
+      // Don't escape HTML for synonym display - it contains intentional <strong> tags
+      if (text.includes('<strong>')) {
+        const escapedTerm = escapeHTML(term);
+        const regex = new RegExp(`(${escapedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<mark style="background:#fff3cd;padding:1px 3px;border-radius:3px;">$1</mark>');
+      }
+      
+      // For regular text, escape HTML first
       const escapedText = escapeHTML(text);
       const escapedTerm = escapeHTML(term);
       const regex = new RegExp(`(${escapedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
