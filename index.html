@@ -280,7 +280,9 @@
       if (tabName === "review")   tabContent.innerHTML = renderSpacedRecall();
     }
 
-    // Auto-load CSV from GitHub
+    // Auto-load CSV from GitHub (efficient approach - no localStorage storage)
+    let cachedFullDataset = null;
+    
     async function autoLoadFromGitHub() {
       try {
         document.getElementById('ingestStatus').textContent = '📥 Loading enhanced dataset from GitHub...';
@@ -298,27 +300,18 @@
           return;
         }
 
-        // Save to localStorage
-        const existing = getLibrary();
-        const combined = existing.concat(normalized);
+        // Cache dataset in memory instead of localStorage to avoid quota issues
+        cachedFullDataset = normalized;
         
-        try {
-          saveLibrary(combined);
-          initWeekDaySelectors();
-          document.getElementById('ingestStatus').textContent = 
-            `✅ Auto-loaded ${normalized.length} words from GitHub! Total library: ${getLibrary().length}.`;
-          
-          // Auto-load Week 1 / Day 1 to show words immediately
-          loadWeekDay(1, 1);
-          if (typeof showTab === 'function') showTab('visual');
-        } catch (e) {
-          if (e.name === 'QuotaExceededError') {
-            document.getElementById('ingestStatus').textContent = 
-              '❌ Storage quota exceeded! Use "Reset All Data" button first.';
-          } else {
-            document.getElementById('ingestStatus').textContent = `❌ Error saving data: ${e.message}`;
-          }
-        }
+        // Initialize week/day selectors based on dataset size
+        initWeekDaySelectorsFromCache();
+        document.getElementById('ingestStatus').textContent = 
+          `✅ Auto-loaded ${normalized.length} words from GitHub! Ready to learn.`;
+        
+        // Auto-load Week 1 / Day 1 to show words immediately
+        loadWeekDayFromCache(1, 1);
+        if (typeof showTab === 'function') showTab('visual');
+        
       } catch (error) {
         console.error('Auto-load error:', error);
         document.getElementById('ingestStatus').textContent = 
@@ -326,10 +319,73 @@
       }
     }
 
+    // Initialize selectors from cached dataset
+    function initWeekDaySelectorsFromCache() {
+      if (!cachedFullDataset) return;
+      
+      const totalWeeks = Math.ceil(cachedFullDataset.length / 100);
+      const weekSel = document.getElementById('weekSelect');
+      const daySel = document.getElementById('daySelect');
+      
+      weekSel.innerHTML = '';
+      for (let i = 1; i <= totalWeeks; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `Week ${i}`;
+        weekSel.appendChild(opt);
+      }
+      
+      daySel.innerHTML = '';
+      for (let i = 1; i <= 5; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `Day ${i}`;
+        daySel.appendChild(opt);
+      }
+    }
+
+    // Load specific week/day from cached dataset
+    function loadWeekDayFromCache(week, day) {
+      if (!cachedFullDataset) {
+        console.warn('No cached dataset available');
+        return;
+      }
+      
+      const perWeek = 100, perDay = 20;
+      const start = (week - 1) * perWeek + (day - 1) * perDay;
+      const slice = cachedFullDataset.slice(start, start + perDay);
+      
+      window.wordList = slice;
+      console.log(`Loaded Week ${week}, Day ${day}: ${slice.length} words`);
+      
+      if (typeof updateDueCountBadge === 'function') updateDueCountBadge();
+    }
+
+    // Override the original loadSelectedWeekDay to use cache
+    function loadSelectedWeekDayFromCache() {
+      const week = parseInt(document.getElementById('weekSelect').value);
+      const day = parseInt(document.getElementById('daySelect').value);
+      loadWeekDayFromCache(week, day);
+      
+      // Refresh current tab
+      const activeTab = document.querySelector('.tabs button.active');
+      if (activeTab) {
+        const tabName = activeTab.getAttribute('data-tab');
+        if (typeof showTab === 'function') showTab(tabName);
+      }
+    }
+
     // Initialize after all scripts are loaded
     document.addEventListener('DOMContentLoaded', () => {
       initWeekDaySelectors();
-      document.getElementById('loadWeekBtn').addEventListener('click', loadSelectedWeekDay);
+      document.getElementById('loadWeekBtn').addEventListener('click', () => {
+        // Use cache-based loading if available, otherwise fall back to original
+        if (cachedFullDataset) {
+          loadSelectedWeekDayFromCache();
+        } else {
+          loadSelectedWeekDay();
+        }
+      });
       document.getElementById('ingestBtn').addEventListener('click', handleBulkIngest);
       document.getElementById('autoLoadBtn').addEventListener('click', autoLoadFromGitHub);
       document.getElementById('manualLoadToggle').addEventListener('click', () => {
