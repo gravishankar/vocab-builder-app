@@ -626,6 +626,22 @@
       document.querySelectorAll('.tabs button[data-tab]').forEach(btn => {
         btn.addEventListener('click', (e) => {
           const tabName = e.target.getAttribute('data-tab');
+
+          // Special handling for sentence builder - redirect to flashcard app
+          if (tabName === 'story') {
+            const currentWords = W();
+            if (currentWords.length > 0) {
+              // Encode the word list as URL parameter
+              const wordData = encodeURIComponent(JSON.stringify(currentWords));
+              const flashcardUrl = `https://graishankar.github.io/habbitZ-flashcards?words=${wordData}`;
+              window.open(flashcardUrl, '_blank');
+            } else {
+              // If no words loaded, just open the flashcard app
+              window.open('https://graishankar.github.io/habbitZ-flashcards', '_blank');
+            }
+            return;
+          }
+
           showTab(tabName, e.target);
         });
       });
