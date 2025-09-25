@@ -1,0 +1,20 @@
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main text -->
+  <text x="10" y="40" font-family="Inter, sans-serif" font-size="28" font-weight="700" fill="#2563eb">
+    vocab<tspan fill="#6b7280">bit</tspan><tspan fill="#2563eb">Z</tspan>
+  </text>
+
+  <!-- Habit-building dots pattern (representing consistent learning) -->
+  <circle cx="175" cy="15" r="3" fill="#2563eb" opacity="0.8">
+    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" begin="0s"/>
+  </circle>
+  <circle cx="185" cy="15" r="3" fill="#2563eb" opacity="0.6">
+    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" begin="0.5s"/>
+  </circle>
+  <circle cx="195" cy="15" r="3" fill="#2563eb" opacity="0.4">
+    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" begin="1s"/>
+  </circle>
+
+  <!-- Subtle underline accent -->
+  <rect x="10" y="45" width="120" height="2" fill="#2563eb" opacity="0.2" rx="1"/>
+</svg>

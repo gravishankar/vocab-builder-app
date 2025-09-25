@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>vocabbitZ - Level Up Your Words</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="week-data/week1.js"></script>
+</head>
+<body>
+  <h1>vocabbitZ</h1>
+  <p style="text-align: center; color: #666; margin-top: -0.5rem; font-style: italic; font-size: 1.1rem;">Level Up Your Words, Build Better Habits</p>
+
+  <!-- Search Section -->
+  <div class="search-container" style="max-width:860px;margin:0 auto 1.5rem;text-align:center;">
+    <div style="position:relative;display:inline-block;width:100%;max-width:500px;">
+      <input 
+        type="text" 
+        id="searchInput" 
+        placeholder="🔍 Search for any word..." 
+        style="width:100%;padding:12px 45px 12px 16px;font-size:1rem;border:1px solid #d1d5db;border-radius:8px;outline:none;transition:all 0.2s ease;box-shadow:0 1px 2px rgba(0,0,0,0.05);"
+        autocomplete="off"
+      >
+      <button 
+        id="clearSearchBtn" 
+        style="position:absolute;right:15px;top:50%;transform:translateY(-50%);background:none;border:none;color:#7f8c8d;cursor:pointer;font-size:1.2em;display:none;"
+        title="Clear search"
+      >×</button>
+    </div>
+    <div id="searchSuggestions" style="position:relative;max-width:500px;margin:0 auto;"></div>
+  </div>
+
+  <div class="controls" style="max-width:860px;margin:0 auto 1rem;">
+    <label>Week:
+      <select id="weekSelect"></select>
+    </label>
+    <label style="margin-left:1rem;">Day:
+      <select id="daySelect"></select>
+    </label>
+    <button id="loadWeekBtn">Load</button>
+
+    <span style="float:right;">
+      <strong>🔁 Due Today:</strong> <span id="dueCount">0</span>
+    </span>
+  </div>
+
+  <div class="tabs">
+    <button data-tab="search">🔍 Search</button>
+    <button data-tab="visual">📷 Visual Wall</button>
+    <button data-tab="mnemonics">🧠 Mnemonics</button>
+    <button data-tab="context">✍️ Context Sentences</button>
+    <button data-tab="quiz">📝 Quiz</button>
+    <button data-tab="story">🧩 Story Builder</button>
+    <button data-tab="review">🔁 Spaced Recall</button>
+  </div>
+
+  <div id="tab-content"></div>
+
+  <hr style="margin:2rem 0;">
+
+  <h3>📥 Load Vocabulary Data</h3>
+  <p style="max-width:860px;margin:0 auto 1rem;">
+    <strong>Option 1:</strong> Auto-load 5,000+ words with mnemonics from our curated dataset<br>
+    <strong>Option 2:</strong> Upload your own <code>.csv</code> or <code>.json</code> file
+  </p>
+  
+  <div style="max-width:860px;margin:0 auto 1rem;">
+    <button id="autoLoadBtn" style="background-color:#2563eb;color:white;padding:12px 24px;margin-right:12px;border:none;border-radius:8px;cursor:pointer;font-weight:500;transition:all 0.2s ease;">
+      📊 Auto-Load Enhanced Dataset (5,000+ words)
+    </button>
+    <button id="manualLoadToggle" style="background-color:#6b7280;color:white;padding:12px 24px;border:none;border-radius:8px;cursor:pointer;font-weight:500;transition:all 0.2s ease;">
+      📁 Upload Custom File
+    </button>
+  </div>
+
+  <div id="manualUpload" style="max-width:860px;margin:0 auto 1rem;display:none;">
+    <p style="color:#666;margin-bottom:10px;">
+      Upload a <code>.csv</code> or <code>.json</code> with columns: <code>word,definition,partOfSpeech,mnemonic,sentence,icon</code>
+    </p>
+    <input type="file" id="bulkFile" accept=".csv,.json" />
+    <button id="ingestBtn">Ingest to Local Library</button>
+  </div>
+  
+  <button id="resetBtn" style="background-color:#ef4444;color:white;margin-left:12px;padding:12px 24px;border:none;border-radius:8px;cursor:pointer;font-weight:500;transition:all 0.2s ease;">🗑️ Reset All Data</button>
+  <p id="ingestStatus"></p>
+
+  <!-- scripts -->
+  <script src="data_loader.js"></script>
+  <script src="scheduler.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Helper function from app.js
+    function W() {
+      if (Array.isArray(window.wordList)) {
+        console.log('Using window.wordList:', window.wordList.length, 'words');
+        return window.wordList;
+      }
+      try { 
+        if (typeof wordList !== 'undefined') {
+          console.log('Using seed wordList:', wordList.length, 'words');
+          return wordList; 
+        } 
+      } catch(e){}
+      console.log('No words found, returning empty array');
+      return [];
+    }
+
+    function shuffle(arr){ return arr.slice().sort(()=>Math.random()-0.5); }
+    function escapeJS(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+    function escapeHTML(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m])); }
+    function cssEscape(s){ return String(s).replace(/[^a-zA-Z0-9_-]/g, '_'); }
+
+    // Toggle synonyms function
+    function toggleSynonyms(index) {
+      const synonymsSection = document.getElementById(`synonyms-${index}`);
+      const expandIcon = document.getElementById(`expand-${index}`);
+      
+      if (synonymsSection.style.display === 'none' || synonymsSection.style.display === '') {
+        synonymsSection.style.display = 'block';
+        expandIcon.textContent = '▲ hide synonyms';
+        expandIcon.style.color = '#2563eb';
+      } else {
+        synonymsSection.style.display = 'none';
+        expandIcon.textContent = '▼ synonyms';
+        expandIcon.style.color = '#3498db';
+      }
+    }
+
+    // Search functionality
+    let searchResults = [];
+    let currentSearchTerm = '';
+
+    function getAllWords() {
+      // Get words from cache or current wordList
+      return cachedFullDataset || W() || [];
+    }
+
+    function performSearch(searchTerm) {
+      if (!searchTerm || searchTerm.length < 2) {
+        searchResults = [];
+        return [];
+      }
+
+      const allWords = getAllWords();
+      const term = searchTerm.toLowerCase().trim();
+      
+      // Multi-criteria search with relevance scoring
+      const results = allWords.map(word => {
+        let score = 0;
+        const wordLower = (word.word || '').toLowerCase();
+        const defLower = (word.definition || '').toLowerCase();
+        const synonymsLower = ((word.synonyms || '') + ' ' + (word.moreSynonyms || '')).toLowerCase();
+        
+        // Exact word match (highest priority)
+        if (wordLower === term) score += 100;
+        // Word starts with search term
+        else if (wordLower.startsWith(term)) score += 80;
+        // Word contains search term
+        else if (wordLower.includes(term)) score += 60;
+        
+        // Definition contains search term
+        if (defLower.includes(term)) score += 30;
+        
+        // Synonyms contain search term
+        if (synonymsLower.includes(term)) score += 25;
+        
+        return { word, score };
+      })
+      .filter(result => result.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 50) // Limit to top 50 results
+      .map(result => result.word);
+
+      searchResults = results;
+      currentSearchTerm = searchTerm;
+      return results;
+    }
+
+    function showSearchSuggestions(searchTerm) {
+      const suggestionsContainer = document.getElementById('searchSuggestions');
+      
+      if (!searchTerm || searchTerm.length < 2) {
+        suggestionsContainer.innerHTML = '';
+        suggestionsContainer.style.display = 'none';
+        return;
+      }
+
+      const allWords = getAllWords();
+      const suggestions = allWords
+        .filter(word => word.word && word.word.toLowerCase().startsWith(searchTerm.toLowerCase()))
+        .slice(0, 8)
+        .map(word => word.word);
+
+      if (suggestions.length === 0) {
+        suggestionsContainer.style.display = 'none';
+        return;
+      }
+
+      const suggestionsHtml = suggestions.map(suggestion => 
+        `<div class="suggestion-item" onclick="selectSuggestion('${escapeJS(suggestion)}')" 
+         style="padding:8px 15px;cursor:pointer;text-align:left;border-bottom:1px solid #ecf0f1;background:white;color:#2c3e50;">
+          ${suggestion}
+        </div>`
+      ).join('');
+
+      suggestionsContainer.innerHTML = `
+        <div style="position:absolute;top:5px;left:0;right:0;background:white;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1000;max-height:300px;overflow-y:auto;">
+          ${suggestionsHtml}
+        </div>
+      `;
+      suggestionsContainer.style.display = 'block';
+    }
+
+    function selectSuggestion(word) {
+      document.getElementById('searchInput').value = word;
+      document.getElementById('searchSuggestions').style.display = 'none';
+      executeSearch(word);
+    }
+
+    function executeSearch(searchTerm = null) {
+      const term = searchTerm || document.getElementById('searchInput').value;
+      if (!term) return;
+
+      performSearch(term);
+      showTab('search');
+      document.getElementById('searchSuggestions').style.display = 'none';
+      
+      // Update clear button visibility
+      document.getElementById('clearSearchBtn').style.display = term ? 'block' : 'none';
+    }
+
+    function clearSearch() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('clearSearchBtn').style.display = 'none';
+      document.getElementById('searchSuggestions').style.display = 'none';
+      searchResults = [];
+      currentSearchTerm = '';
+      
+      // Return to visual wall
+      showTab('visual');
+    }
+
+    // Render functions
+    function renderSearchResults() {
+      if (!currentSearchTerm) {
+        return `
+          <div style="text-align:center;padding:2rem;color:#7f8c8d;">
+            <div style="font-size:3em;margin-bottom:1rem;">🔍</div>
+            <h3 style="color:#2c3e50;margin-bottom:1rem;">Search for Words</h3>
+            <p>Use the search box above to find any word in the vocabulary database.</p>
+            <div style="background:#f8f9fa;padding:1rem;border-radius:8px;margin-top:1.5rem;text-align:left;">
+              <strong>Search Features:</strong>
+              <ul style="margin:0.5rem 0;">
+                <li>🎯 <strong>Exact matches</strong> and <strong>partial matches</strong></li>
+                <li>📖 Search by <strong>definition</strong> content</li>
+                <li>🔄 Search within <strong>synonyms</strong></li>
+                <li>⚡ <strong>Real-time suggestions</strong> as you type</li>
+              </ul>
+            </div>
+          </div>
+        `;
+      }
+
+      if (searchResults.length === 0) {
+        return `
+          <div style="text-align:center;padding:2rem;color:#7f8c8d;">
+            <div style="font-size:3em;margin-bottom:1rem;">🤷‍♀️</div>
+            <h3 style="color:#2c3e50;margin-bottom:1rem;">No Results Found</h3>
+            <p>No words found matching "<strong>${escapeHTML(currentSearchTerm)}</strong>"</p>
+            <p style="color:#7f8c8d;margin-top:1rem;">Try searching for:</p>
+            <div style="color:#2563eb;">• A different spelling<br>• Part of the word<br>• A synonym or related term</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div style="margin-bottom:1rem;padding:1rem;background:#e8f6ff;border-radius:8px;text-align:center;">
+          <strong style="color:#2c3e50;">Found ${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${escapeHTML(currentSearchTerm)}"</strong>
+          <button onclick="clearSearch()" style="margin-left:1rem;padding:4px 12px;background:#3498db;color:white;border:none;border-radius:15px;cursor:pointer;font-size:0.9em;">
+            Clear Search
+          </button>
+        </div>
+        ${searchResults.map((word, index) => {
+          const hasSynonyms = word.synonyms || word.moreSynonyms;
+          const synonymsDisplay = word.synonyms ? `<strong>Synonyms:</strong> ${word.synonyms}` : '';
+          const moreSynonymsDisplay = word.moreSynonyms ? `<strong>More synonyms:</strong> ${word.moreSynonyms}` : '';
+          
+          return `<div class="word-card search-result" style="margin-bottom:1.2em;padding:1em;background-color:#fafafa;border-radius:8px;border-left:4px solid #2563eb;transition:all 0.3s ease;">
+            <div class="word-header" style="display:flex;align-items:center;cursor:${hasSynonyms ? 'pointer' : 'default'};" ${hasSynonyms ? `onclick="toggleSynonyms('search-${index}')"` : ''}>
+              <img src="${word.icon || 'icons/book.png'}" alt="" style="height:40px;margin-right:12px;border-radius:4px;">
+              <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <strong style="font-size:1.1em;color:#2c3e50;">${highlightSearchTerm(word.word, currentSearchTerm)}</strong>
+                  ${word.partOfSpeech ? `<span style="color:#7f8c8d;font-size:0.9em;font-style:italic;">(${word.partOfSpeech})</span>` : ''}
+                  ${hasSynonyms ? `<span class="expand-icon" id="expand-search-${index}" style="color:#2563eb;font-size:0.8em;margin-left:auto;">▼ synonyms</span>` : ''}
+                </div>
+                <div style="color:#34495e;margin-top:0.3em;">${highlightSearchTerm(word.definition, currentSearchTerm)}</div>
+                ${word.level ? `<span style="color:#888;font-size:0.9em;">Level ${word.level}</span>` : ''}
+              </div>
+            </div>
+            ${hasSynonyms ? `
+              <div class="synonyms-section" id="synonyms-search-${index}" style="display:none;margin-top:0.8em;padding-top:0.8em;border-top:1px solid #ecf0f1;">
+                ${synonymsDisplay ? `<div style="margin-bottom:0.5em;color:#6b7280;">${highlightSearchTerm(synonymsDisplay, currentSearchTerm)}</div>` : ''}
+                ${moreSynonymsDisplay ? `<div style="color:#6b7280;">${highlightSearchTerm(moreSynonymsDisplay, currentSearchTerm)}</div>` : ''}
+              </div>` : ''}
+            ${word.mnemonic ? `
+              <div style="margin-top:0.8em;padding-top:0.8em;border-top:1px solid #ecf0f1;">
+                <div style="color:#2563eb;font-size:0.9em;"><strong>🧠 Memory Device:</strong> ${word.mnemonic}</div>
+              </div>` : ''}
+          </div>`;
+        }).join('')}
+      `;
+    }
+
+    function highlightSearchTerm(text, term) {
+      if (!term || !text) return text;
+      
+      // Don't escape HTML for synonym display - it contains intentional <strong> tags
+      if (text.includes('<strong>')) {
+        const escapedTerm = escapeHTML(term);
+        const regex = new RegExp(`(${escapedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<mark style="background:#fff3cd;padding:1px 3px;border-radius:3px;">$1</mark>');
+      }
+      
+      // For regular text, escape HTML first
+      const escapedText = escapeHTML(text);
+      const escapedTerm = escapeHTML(term);
+      const regex = new RegExp(`(${escapedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      return escapedText.replace(regex, '<mark style="background:#fff3cd;padding:1px 3px;border-radius:3px;">$1</mark>');
+    }
+
+    function renderVisualWall() {
+      const list = W();
+      if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
+      return list.map((word, index) => {
+        const hasSynonyms = word.synonyms || word.moreSynonyms;
+        const synonymsDisplay = word.synonyms ? `<strong>Synonyms:</strong> ${word.synonyms}` : '';
+        const moreSynonymsDisplay = word.moreSynonyms ? `<strong>More synonyms:</strong> ${word.moreSynonyms}` : '';
+        
+        return `<div class="word-card" style="margin-bottom:1.2em;padding:1em;background-color:#fafafa;border-radius:8px;border-left:4px solid #2563eb;transition:all 0.3s ease;">
+          <div class="word-header" style="display:flex;align-items:center;cursor:${hasSynonyms ? 'pointer' : 'default'};" ${hasSynonyms ? `onclick="toggleSynonyms(${index})"` : ''}>
+            <img src="${word.icon || 'icons/book.png'}" alt="" style="height:40px;margin-right:12px;border-radius:4px;">
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <strong style="font-size:1.1em;color:#2c3e50;">${word.word}</strong>
+                ${word.partOfSpeech ? `<span style="color:#7f8c8d;font-size:0.9em;font-style:italic;">(${word.partOfSpeech})</span>` : ''}
+                ${hasSynonyms ? `<span class="expand-icon" id="expand-${index}" style="color:#2563eb;font-size:0.8em;margin-left:auto;">▼ synonyms</span>` : ''}
+              </div>
+              <div style="color:#34495e;margin-top:0.3em;">${word.definition}</div>
+              ${word.category ? `<span style="color:#888;font-size:0.9em;">${word.category}</span>` : ''}
+            </div>
+          </div>
+          ${hasSynonyms ? `
+            <div class="synonyms-section" id="synonyms-${index}" style="display:none;margin-top:0.8em;padding-top:0.8em;border-top:1px solid #ecf0f1;">
+              ${synonymsDisplay ? `<div style="margin-bottom:0.5em;color:#6b7280;">${synonymsDisplay}</div>` : ''}
+              ${moreSynonymsDisplay ? `<div style="color:#6b7280;">${moreSynonymsDisplay}</div>` : ''}
+            </div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    function renderMnemonics() {
+      const list = W();
+      if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
+      return list.map(word =>
+        `<div style="margin-bottom:1.5em;padding:1em;background-color:#f9f9f9;border-radius:8px;border-left:4px solid #2563eb;">
+          <strong style="color:#2c3e50;font-size:1.1em;">${word.word}</strong>
+          <span style="color:#7f8c8d;margin-left:0.5em;">(${word.partOfSpeech || 'unknown'})</span>
+          <div style="margin-top:0.5em;color:#34495e;">
+            <strong>Definition:</strong> ${word.definition}
+          </div>
+          <div style="margin-top:0.8em;color:#2563eb;">
+            <strong>🧠 Memory Device:</strong> ${word.mnemonic || '<em>No mnemonic available</em>'}
+          </div>
+          ${word.mnemonicSourceUrl ? `<div style="margin-top:0.3em;font-size:0.9em;"><a href="${word.mnemonicSourceUrl}" target="_blank" style="color:#2563eb;">📖 Source</a></div>` : ''}
+        </div>`
+      ).join('');
+    }
+
+    function renderContextSentences() {
+      const list = W();
+      if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
+      return list.map(word =>
+        `<div style="margin-bottom:1.5em;padding:1em;background-color:#f8fafc;border-radius:8px;border-left:4px solid #2563eb;">
+          <strong style="color:#2c3e50;font-size:1.1em;">${word.word}</strong>
+          <span style="color:#7f8c8d;margin-left:0.5em;">(${word.partOfSpeech || 'unknown'})</span>
+          <div style="margin-top:0.5em;color:#34495e;">
+            <strong>Definition:</strong> ${word.definition}
+          </div>
+          <div style="margin-top:0.8em;color:#2563eb;">
+            <strong>✍️ Context Sentence:</strong> ${word.sentence || '<em>No context sentence available</em>'}
+          </div>
+        </div>`
+      ).join('');
+    }
+
+    function renderQuiz() {
+      const list = W();
+      if (!list.length) return `<p>Load a Week/Day first.</p>`;
+      const due = (typeof dueWordsInCurrentSet === 'function') ? dueWordsInCurrentSet() : [];
+      const pool = due.length ? due : list;
+      const q = pool[Math.floor(Math.random() * pool.length)];
+      const inputId = "quiz-answer";
+      return `
+        <p><strong>What is the definition of "<span>${q.word}</span>"?</strong></p>
+        <input type="text" id="${inputId}" style="width:100%;padding:8px;" placeholder="Type your answer here...">
+        <button onclick="checkAnswer('${escapeJS(q.word)}','${escapeJS(q.definition)}','${inputId}')">Check</button>
+        <p id="quiz-feedback" style="margin-top:10px;"></p>
+        <p style="margin-top:10px;color:#555;">${due.length ? '🔁 Spaced practice word' : '📚 Practice word'}</p>
+      `;
+    }
+
+    function renderStoryBuilder() {
+      const list = W();
+      if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
+      
+      // Show story builder prompts from CSV data
+      return list.map(word => {
+        if (word.storyBuilder && word.storyBuilder.trim()) {
+          return `<div style="margin-bottom:1.5em;padding:1em;background-color:#f8fafc;border-radius:8px;border-left:4px solid #2563eb;">
+            <strong style="color:#2c3e50;font-size:1.1em;">${word.word}</strong>
+            <span style="color:#7f8c8d;margin-left:0.5em;">(${word.partOfSpeech || 'unknown'})</span>
+            <div style="margin-top:0.5em;color:#34495e;">
+              <strong>Definition:</strong> ${word.definition}
+            </div>
+            <div style="margin-top:0.8em;color:#d68910;">
+              <strong>🧩 Story Prompt:</strong> ${word.storyBuilder}
+            </div>
+          </div>`;
+        }
+        return '';
+      }).filter(item => item).join('') || 
+      `<div style="padding:1em;background-color:#f8fafc;border-radius:8px;border-left:4px solid #2563eb;">
+        <p><strong>🧩 Creative Story Challenge</strong></p>
+        <p>Use these words in a creative sentence or story:</p>
+        <ul>${shuffle(list).slice(0, 5).map(w => `<li><strong>${w.word}</strong> - ${w.definition}</li>`).join('')}</ul>
+        <textarea rows="6" style="width:100%;padding:10px;margin-top:10px;" placeholder="Write your creative story here using the words above..."></textarea>
+      </div>`;
+    }
+
+    function renderSpacedRecall() {
+      if (typeof dueWordsInCurrentSet !== 'function') {
+        return `<p>Spaced recall engine not loaded. Make sure <code>scheduler.js</code> is included.</p>`;
+      }
+      const list = W();
+      if (!list.length) return `<p>Load a Week/Day first.</p>`;
+      const due = dueWordsInCurrentSet();
+      if (!due.length) return "<p>No words are due for spaced review right now. ✅</p>";
+
+      const items = due.map(w => {
+        const distractors = shuffle(W().filter(x => x.word !== w.word)).slice(0,3).map(x => x.definition);
+        const choices = shuffle([w.definition, ...distractors]);
+        const opts = choices.map(c => `<label style="display:block;margin:.25rem 0;">
+            <input type="radio" name="q_${w.word}" value="${escapeHTML(c)}"> ${escapeHTML(c)}
+          </label>`).join('');
+        return `<div class="rev-item" style="margin:1rem 0;padding:.75rem;border:1px solid #eee;border-radius:8px;">
+          <strong>${w.word}</strong>
+          <div>${opts}</div>
+          <button onclick="gradeReview('${escapeJS(w.word)}','${escapeJS(w.definition)}')">Check</button>
+          <span id="res_${cssEscape(w.word)}" style="margin-left:.5rem;"></span>
+        </div>`;
+      }).join('');
+
+      return `<h3>🔁 Spaced Review (${due.length} due)</h3>${items}`;
+    }
+
+    function checkAnswer(word, correct, inputId) {
+      const userInput = document.getElementById(inputId).value.trim().toLowerCase();
+      const ok = userInput && correct.toLowerCase().split(/\W+/).some(t => t && userInput.includes(t));
+      document.getElementById("quiz-feedback").textContent = ok
+        ? "✅ Correct!"
+        : `❌ Try again. Correct answer: ${correct}`;
+      if (typeof updateDueCountBadge === 'function') updateDueCountBadge();
+    }
+
+    function gradeReview(word, correctDef) {
+      const sel = document.querySelector(`input[name="q_${cssEscape(word)}"]:checked`);
+      const res = document.getElementById(`res_${cssEscape(word)}`);
+      if (!sel) { if (res) res.textContent = 'Pick an option.'; return; }
+      const ok = sel.value === correctDef;
+      if (res) res.textContent = ok ? '✅' : '❌';
+      if (typeof updateDueCountBadge === 'function') updateDueCountBadge();
+    }
+
+    // Global showTab function
+    function showTab(tabName, btn) {
+      const tabContent = document.getElementById("tab-content");
+      document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+      
+      // Find the button that was clicked or matches the tab
+      let activeBtn = btn;
+      if (!activeBtn) {
+        activeBtn = document.querySelector(`.tabs button[data-tab="${tabName}"]`);
+      }
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // Render the appropriate tab content
+      if (tabName === "search")   tabContent.innerHTML = renderSearchResults();
+      if (tabName === "visual")   tabContent.innerHTML = renderVisualWall();
+      if (tabName === "mnemonics")tabContent.innerHTML = renderMnemonics();
+      if (tabName === "context")  tabContent.innerHTML = renderContextSentences();
+      if (tabName === "quiz")     tabContent.innerHTML = renderQuiz();
+      if (tabName === "story")    tabContent.innerHTML = renderStoryBuilder();
+      if (tabName === "review")   tabContent.innerHTML = renderSpacedRecall();
+    }
+
+    // Auto-load CSV from GitHub (efficient approach - no localStorage storage)
+    let cachedFullDataset = null;
+    
+    async function autoLoadFromGitHub() {
+      try {
+        document.getElementById('ingestStatus').textContent = '📥 Loading enhanced dataset from GitHub...';
+        
+        // Fetch CSV from GitHub repository
+        const response = await fetch('data/sesamewords_leveled_list_with_mnemonics.csv');
+        if (!response.ok) throw new Error('Failed to fetch data from GitHub');
+        
+        const csvText = await response.text();
+        const parsed = parseCSV(csvText);
+        const normalized = normalizeRows(parsed);
+        
+        if (!normalized.length) {
+          document.getElementById('ingestStatus').textContent = '❌ No valid data found in GitHub dataset.';
+          return;
+        }
+
+        // Cache dataset in memory instead of localStorage to avoid quota issues
+        cachedFullDataset = normalized;
+        
+        // Initialize week/day selectors based on dataset size
+        initWeekDaySelectorsFromCache();
+        document.getElementById('ingestStatus').textContent =
+          `✅ Auto-loaded ${normalized.length} words from GitHub! Ready to build vocabulary habits.`;
+        
+        // Auto-load Week 1 / Day 1 to show words immediately
+        loadWeekDayFromCache(1, 1);
+        if (typeof showTab === 'function') showTab('visual');
+        
+      } catch (error) {
+        console.error('Auto-load error:', error);
+        document.getElementById('ingestStatus').textContent = 
+          '❌ Failed to auto-load from GitHub. Try uploading your vocabulary file manually.';
+      }
+    }
+
+    // Initialize selectors from cached dataset
+    function initWeekDaySelectorsFromCache() {
+      if (!cachedFullDataset) return;
+      
+      const totalWeeks = Math.ceil(cachedFullDataset.length / 100);
+      const weekSel = document.getElementById('weekSelect');
+      const daySel = document.getElementById('daySelect');
+      
+      weekSel.innerHTML = '';
+      for (let i = 1; i <= totalWeeks; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `Week ${i}`;
+        weekSel.appendChild(opt);
+      }
+      
+      daySel.innerHTML = '';
+      for (let i = 1; i <= 5; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `Day ${i}`;
+        daySel.appendChild(opt);
+      }
+    }
+
+    // Load specific week/day from cached dataset
+    function loadWeekDayFromCache(week, day) {
+      if (!cachedFullDataset) {
+        console.warn('No cached dataset available');
+        return;
+      }
+      
+      const perWeek = 100, perDay = 20;
+      const start = (week - 1) * perWeek + (day - 1) * perDay;
+      const slice = cachedFullDataset.slice(start, start + perDay);
+      
+      window.wordList = slice;
+      console.log(`Loaded Week ${week}, Day ${day}: ${slice.length} words`);
+      
+      if (typeof updateDueCountBadge === 'function') updateDueCountBadge();
+    }
+
+    // Override the original loadSelectedWeekDay to use cache
+    function loadSelectedWeekDayFromCache() {
+      const week = parseInt(document.getElementById('weekSelect').value);
+      const day = parseInt(document.getElementById('daySelect').value);
+      loadWeekDayFromCache(week, day);
+      
+      // Refresh current tab
+      const activeTab = document.querySelector('.tabs button.active');
+      if (activeTab) {
+        const tabName = activeTab.getAttribute('data-tab');
+        if (typeof showTab === 'function') showTab(tabName);
+      }
+    }
+
+    // Initialize after all scripts are loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      initWeekDaySelectors();
+      document.getElementById('loadWeekBtn').addEventListener('click', () => {
+        // Use cache-based loading if available, otherwise fall back to original
+        if (cachedFullDataset) {
+          loadSelectedWeekDayFromCache();
+        } else {
+          loadSelectedWeekDay();
+        }
+      });
+      document.getElementById('ingestBtn').addEventListener('click', handleBulkIngest);
+      document.getElementById('autoLoadBtn').addEventListener('click', autoLoadFromGitHub);
+      document.getElementById('manualLoadToggle').addEventListener('click', () => {
+        const uploadDiv = document.getElementById('manualUpload');
+        uploadDiv.style.display = uploadDiv.style.display === 'none' ? 'block' : 'none';
+      });
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to reset all vocabulary data and learning progress? This cannot be undone.')) {
+          resetAllData();
+        }
+      });
+      updateDueCountBadge();
+      
+      // Add event listeners to tab buttons
+      document.querySelectorAll('.tabs button[data-tab]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const tabName = e.target.getAttribute('data-tab');
+          showTab(tabName, e.target);
+        });
+      });
+
+      // Add search event listeners
+      const searchInput = document.getElementById('searchInput');
+      const clearBtn = document.getElementById('clearSearchBtn');
+      const suggestionsContainer = document.getElementById('searchSuggestions');
+
+      searchInput.addEventListener('input', (e) => {
+        const value = e.target.value;
+        clearBtn.style.display = value ? 'block' : 'none';
+        
+        // Show suggestions after 2+ characters
+        if (value.length >= 2) {
+          showSearchSuggestions(value);
+        } else {
+          suggestionsContainer.style.display = 'none';
+        }
+      });
+
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          executeSearch();
+        } else if (e.key === 'Escape') {
+          clearSearch();
+        }
+      });
+
+      clearBtn.addEventListener('click', clearSearch);
+
+      // Hide suggestions when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-container')) {
+          suggestionsContainer.style.display = 'none';
+        }
+      });
+
+      // Add focus styling
+      searchInput.addEventListener('focus', () => {
+        searchInput.style.borderColor = '#2563eb';
+        searchInput.style.boxShadow = '0 2px 8px rgba(37,99,235,0.1)';
+      });
+
+      searchInput.addEventListener('blur', () => {
+        searchInput.style.borderColor = '#d1d5db';
+        searchInput.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+      });
+      
+      // default view - show search tab
+      showTab('search');
+    });
+  </script>
+</body>
+
+</html>
