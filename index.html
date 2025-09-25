@@ -118,7 +118,7 @@
       if (synonymsSection.style.display === 'none' || synonymsSection.style.display === '') {
         synonymsSection.style.display = 'block';
         expandIcon.textContent = '▲ hide synonyms';
-        expandIcon.style.color = '#e74c3c';
+        expandIcon.style.color = '#2563eb';
       } else {
         synonymsSection.style.display = 'none';
         expandIcon.textContent = '▼ synonyms';
@@ -268,7 +268,7 @@
             <h3 style="color:#2c3e50;margin-bottom:1rem;">No Results Found</h3>
             <p>No words found matching "<strong>${escapeHTML(currentSearchTerm)}</strong>"</p>
             <p style="color:#7f8c8d;margin-top:1rem;">Try searching for:</p>
-            <div style="color:#3498db;">• A different spelling<br>• Part of the word<br>• A synonym or related term</div>
+            <div style="color:#2563eb;">• A different spelling<br>• Part of the word<br>• A synonym or related term</div>
           </div>
         `;
       }
@@ -285,14 +285,14 @@
           const synonymsDisplay = word.synonyms ? `<strong>Synonyms:</strong> ${word.synonyms}` : '';
           const moreSynonymsDisplay = word.moreSynonyms ? `<strong>More synonyms:</strong> ${word.moreSynonyms}` : '';
           
-          return `<div class="word-card search-result" style="margin-bottom:1.2em;padding:1em;background-color:#fafafa;border-radius:8px;border-left:4px solid #e74c3c;transition:all 0.3s ease;">
+          return `<div class="word-card search-result" style="margin-bottom:1.2em;padding:1em;background-color:#fafafa;border-radius:8px;border-left:4px solid #2563eb;transition:all 0.3s ease;">
             <div class="word-header" style="display:flex;align-items:center;cursor:${hasSynonyms ? 'pointer' : 'default'};" ${hasSynonyms ? `onclick="toggleSynonyms('search-${index}')"` : ''}>
               <img src="${word.icon || 'icons/book.png'}" alt="" style="height:40px;margin-right:12px;border-radius:4px;">
               <div style="flex:1;">
                 <div style="display:flex;align-items:center;gap:0.5rem;">
                   <strong style="font-size:1.1em;color:#2c3e50;">${highlightSearchTerm(word.word, currentSearchTerm)}</strong>
                   ${word.partOfSpeech ? `<span style="color:#7f8c8d;font-size:0.9em;font-style:italic;">(${word.partOfSpeech})</span>` : ''}
-                  ${hasSynonyms ? `<span class="expand-icon" id="expand-search-${index}" style="color:#e74c3c;font-size:0.8em;margin-left:auto;">▼ synonyms</span>` : ''}
+                  ${hasSynonyms ? `<span class="expand-icon" id="expand-search-${index}" style="color:#2563eb;font-size:0.8em;margin-left:auto;">▼ synonyms</span>` : ''}
                 </div>
                 <div style="color:#34495e;margin-top:0.3em;">${highlightSearchTerm(word.definition, currentSearchTerm)}</div>
                 ${word.level ? `<span style="color:#888;font-size:0.9em;">Level ${word.level}</span>` : ''}
@@ -300,12 +300,12 @@
             </div>
             ${hasSynonyms ? `
               <div class="synonyms-section" id="synonyms-search-${index}" style="display:none;margin-top:0.8em;padding-top:0.8em;border-top:1px solid #ecf0f1;">
-                ${synonymsDisplay ? `<div style="margin-bottom:0.5em;color:#e67e22;">${highlightSearchTerm(synonymsDisplay, currentSearchTerm)}</div>` : ''}
-                ${moreSynonymsDisplay ? `<div style="color:#8e44ad;">${highlightSearchTerm(moreSynonymsDisplay, currentSearchTerm)}</div>` : ''}
+                ${synonymsDisplay ? `<div style="margin-bottom:0.5em;color:#6b7280;">${highlightSearchTerm(synonymsDisplay, currentSearchTerm)}</div>` : ''}
+                ${moreSynonymsDisplay ? `<div style="color:#6b7280;">${highlightSearchTerm(moreSynonymsDisplay, currentSearchTerm)}</div>` : ''}
               </div>` : ''}
             ${word.mnemonic ? `
               <div style="margin-top:0.8em;padding-top:0.8em;border-top:1px solid #ecf0f1;">
-                <div style="color:#27ae60;font-size:0.9em;"><strong>🧠 Memory Device:</strong> ${word.mnemonic}</div>
+                <div style="color:#2563eb;font-size:0.9em;"><strong>🧠 Memory Device:</strong> ${word.mnemonic}</div>
               </div>` : ''}
           </div>`;
         }).join('')}
@@ -337,14 +337,14 @@
         const synonymsDisplay = word.synonyms ? `<strong>Synonyms:</strong> ${word.synonyms}` : '';
         const moreSynonymsDisplay = word.moreSynonyms ? `<strong>More synonyms:</strong> ${word.moreSynonyms}` : '';
         
-        return `<div class="word-card" style="margin-bottom:1.2em;padding:1em;background-color:#fafafa;border-radius:8px;border-left:4px solid #3498db;transition:all 0.3s ease;">
+        return `<div class="word-card" style="margin-bottom:1.2em;padding:1em;background-color:#fafafa;border-radius:8px;border-left:4px solid #2563eb;transition:all 0.3s ease;">
           <div class="word-header" style="display:flex;align-items:center;cursor:${hasSynonyms ? 'pointer' : 'default'};" ${hasSynonyms ? `onclick="toggleSynonyms(${index})"` : ''}>
             <img src="${word.icon || 'icons/book.png'}" alt="" style="height:40px;margin-right:12px;border-radius:4px;">
             <div style="flex:1;">
               <div style="display:flex;align-items:center;gap:0.5rem;">
                 <strong style="font-size:1.1em;color:#2c3e50;">${word.word}</strong>
                 ${word.partOfSpeech ? `<span style="color:#7f8c8d;font-size:0.9em;font-style:italic;">(${word.partOfSpeech})</span>` : ''}
-                ${hasSynonyms ? `<span class="expand-icon" id="expand-${index}" style="color:#3498db;font-size:0.8em;margin-left:auto;">▼ synonyms</span>` : ''}
+                ${hasSynonyms ? `<span class="expand-icon" id="expand-${index}" style="color:#2563eb;font-size:0.8em;margin-left:auto;">▼ synonyms</span>` : ''}
               </div>
               <div style="color:#34495e;margin-top:0.3em;">${word.definition}</div>
               ${word.category ? `<span style="color:#888;font-size:0.9em;">${word.category}</span>` : ''}
@@ -352,8 +352,8 @@
           </div>
           ${hasSynonyms ? `
             <div class="synonyms-section" id="synonyms-${index}" style="display:none;margin-top:0.8em;padding-top:0.8em;border-top:1px solid #ecf0f1;">
-              ${synonymsDisplay ? `<div style="margin-bottom:0.5em;color:#e67e22;">${synonymsDisplay}</div>` : ''}
-              ${moreSynonymsDisplay ? `<div style="color:#8e44ad;">${moreSynonymsDisplay}</div>` : ''}
+              ${synonymsDisplay ? `<div style="margin-bottom:0.5em;color:#6b7280;">${synonymsDisplay}</div>` : ''}
+              ${moreSynonymsDisplay ? `<div style="color:#6b7280;">${moreSynonymsDisplay}</div>` : ''}
             </div>` : ''}
         </div>`;
       }).join('');
@@ -363,16 +363,16 @@
       const list = W();
       if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
       return list.map(word =>
-        `<div style="margin-bottom:1.5em;padding:1em;background-color:#f9f9f9;border-radius:8px;border-left:4px solid #3498db;">
+        `<div style="margin-bottom:1.5em;padding:1em;background-color:#f9f9f9;border-radius:8px;border-left:4px solid #2563eb;">
           <strong style="color:#2c3e50;font-size:1.1em;">${word.word}</strong>
           <span style="color:#7f8c8d;margin-left:0.5em;">(${word.partOfSpeech || 'unknown'})</span>
           <div style="margin-top:0.5em;color:#34495e;">
             <strong>Definition:</strong> ${word.definition}
           </div>
-          <div style="margin-top:0.8em;color:#e74c3c;">
+          <div style="margin-top:0.8em;color:#2563eb;">
             <strong>🧠 Memory Device:</strong> ${word.mnemonic || '<em>No mnemonic available</em>'}
           </div>
-          ${word.mnemonicSourceUrl ? `<div style="margin-top:0.3em;font-size:0.9em;"><a href="${word.mnemonicSourceUrl}" target="_blank" style="color:#3498db;">📖 Source</a></div>` : ''}
+          ${word.mnemonicSourceUrl ? `<div style="margin-top:0.3em;font-size:0.9em;"><a href="${word.mnemonicSourceUrl}" target="_blank" style="color:#2563eb;">📖 Source</a></div>` : ''}
         </div>`
       ).join('');
     }
@@ -381,13 +381,13 @@
       const list = W();
       if (!list.length) return `<p>No words loaded yet. Use the Week/Day picker and press <strong>Load</strong>.</p>`;
       return list.map(word =>
-        `<div style="margin-bottom:1.5em;padding:1em;background-color:#f8fff8;border-radius:8px;border-left:4px solid #27ae60;">
+        `<div style="margin-bottom:1.5em;padding:1em;background-color:#f8fafc;border-radius:8px;border-left:4px solid #2563eb;">
           <strong style="color:#2c3e50;font-size:1.1em;">${word.word}</strong>
           <span style="color:#7f8c8d;margin-left:0.5em;">(${word.partOfSpeech || 'unknown'})</span>
           <div style="margin-top:0.5em;color:#34495e;">
             <strong>Definition:</strong> ${word.definition}
           </div>
-          <div style="margin-top:0.8em;color:#27ae60;">
+          <div style="margin-top:0.8em;color:#2563eb;">
             <strong>✍️ Context Sentence:</strong> ${word.sentence || '<em>No context sentence available</em>'}
           </div>
         </div>`
@@ -417,7 +417,7 @@
       // Show story builder prompts from CSV data
       return list.map(word => {
         if (word.storyBuilder && word.storyBuilder.trim()) {
-          return `<div style="margin-bottom:1.5em;padding:1em;background-color:#fff8dc;border-radius:8px;border-left:4px solid #f39c12;">
+          return `<div style="margin-bottom:1.5em;padding:1em;background-color:#f8fafc;border-radius:8px;border-left:4px solid #2563eb;">
             <strong style="color:#2c3e50;font-size:1.1em;">${word.word}</strong>
             <span style="color:#7f8c8d;margin-left:0.5em;">(${word.partOfSpeech || 'unknown'})</span>
             <div style="margin-top:0.5em;color:#34495e;">
@@ -430,7 +430,7 @@
         }
         return '';
       }).filter(item => item).join('') || 
-      `<div style="padding:1em;background-color:#fff8dc;border-radius:8px;border-left:4px solid #f39c12;">
+      `<div style="padding:1em;background-color:#f8fafc;border-radius:8px;border-left:4px solid #2563eb;">
         <p><strong>🧩 Creative Story Challenge</strong></p>
         <p>Use these words in a creative sentence or story:</p>
         <ul>${shuffle(list).slice(0, 5).map(w => `<li><strong>${w.word}</strong> - ${w.definition}</li>`).join('')}</ul>
@@ -668,13 +668,13 @@
 
       // Add focus styling
       searchInput.addEventListener('focus', () => {
-        searchInput.style.borderColor = '#2980b9';
-        searchInput.style.boxShadow = '0 2px 10px rgba(52,152,219,0.2)';
+        searchInput.style.borderColor = '#2563eb';
+        searchInput.style.boxShadow = '0 2px 8px rgba(37,99,235,0.1)';
       });
 
       searchInput.addEventListener('blur', () => {
-        searchInput.style.borderColor = '#3498db';
-        searchInput.style.boxShadow = '0 2px 10px rgba(52,152,219,0.1)';
+        searchInput.style.borderColor = '#d1d5db';
+        searchInput.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
       });
       
       // default view - show search tab
