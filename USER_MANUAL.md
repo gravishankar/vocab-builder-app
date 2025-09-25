@@ -1,5 +1,5 @@
 # vocabbitZ - User Manual
-*Level Up Your Words, Build Better Habits*
+*Level Up Your Words, Build Better Habits *
 
 ## Overview
 
