@@ -1,14 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Bitter:wght@400;600;700&display=swap');
+
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #f8faff;
-  color: #333;
+  font-family: 'Bitter', serif;
+  background: #f7f7f7;
+  color: #1f1f1f;
   margin: 0;
   padding: 2rem;
 }
 
 h1 {
   text-align: center;
-  color: #2c3e50;
+  color: #f34f4c;
+  font-weight: 700;
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: -1px;
 }
 
 .tabs {
@@ -19,22 +25,29 @@ h1 {
 }
 
 .tabs button {
-  background-color: #3498db;
+  background-color: #f34f4c;
   border: none;
   color: white;
   padding: 10px 20px;
   margin: 5px;
   font-size: 1rem;
-  border-radius: 5px;
+  font-family: 'Bitter', serif;
+  font-weight: 600;
+  border-radius: 25px;
   cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .tabs button:hover {
-  background-color: #2980b9;
+  background-color: #d43d3a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(243, 79, 76, 0.3);
 }
 
 .tabs button.active {
-  background-color: #e74c3c;
+  background-color: #1f1f1f;
+  color: #f34f4c;
+  box-shadow: 0 2px 8px rgba(31, 31, 31, 0.2);
 }
 
 #tab-content {

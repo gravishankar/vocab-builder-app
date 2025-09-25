@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Vocabulary Builder App</title>
+  <title>vocabbitZ - Level Up Your Words</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
   <script defer src="week-data/week1.js"></script>
 </head>
 <body>
-  <h1>Vocabulary Builder</h1>
+  <h1>vocabbitZ</h1>
+  <p style="text-align: center; color: #666; margin-top: -0.5rem; font-style: italic; font-size: 1.1rem;">Level Up Your Words, Build Better Habits</p>
 
   <!-- Search Section -->
   <div class="search-container" style="max-width:860px;margin:0 auto 1.5rem;text-align:center;">
@@ -528,8 +529,8 @@
         
         // Initialize week/day selectors based on dataset size
         initWeekDaySelectorsFromCache();
-        document.getElementById('ingestStatus').textContent = 
-          `✅ Auto-loaded ${normalized.length} words from GitHub! Ready to learn.`;
+        document.getElementById('ingestStatus').textContent =
+          `✅ Auto-loaded ${normalized.length} words from GitHub! Ready to build vocabulary habits.`;
         
         // Auto-load Week 1 / Day 1 to show words immediately
         loadWeekDayFromCache(1, 1);
@@ -538,7 +539,7 @@
       } catch (error) {
         console.error('Auto-load error:', error);
         document.getElementById('ingestStatus').textContent = 
-          '❌ Failed to auto-load from GitHub. Try uploading the CSV file manually.';
+          '❌ Failed to auto-load from GitHub. Try uploading your vocabulary file manually.';
       }
     }
 
@@ -616,7 +617,7 @@
         uploadDiv.style.display = uploadDiv.style.display === 'none' ? 'block' : 'none';
       });
       document.getElementById('resetBtn').addEventListener('click', () => {
-        if (confirm('Are you sure you want to delete all vocabulary data? This cannot be undone.')) {
+        if (confirm('Are you sure you want to reset all vocabulary data and learning progress? This cannot be undone.')) {
           resetAllData();
         }
       });
